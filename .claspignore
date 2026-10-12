@@ -1,2 +1,5 @@
-**/**
-!src/**/**
+.clasp.json
+.git/**
+.gitignore
+node_modules/**
+test/**
