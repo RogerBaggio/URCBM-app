@@ -85,6 +85,11 @@ function validateDisplayName(name, existingNames) {
   return { valid: true, value: trimmed };
 }
 
+function buildTabName(id) {
+  const short = String(id).replace(/[^A-Za-z0-9]/g, '').slice(0, 12);
+  return (typeof SHEETS !== 'undefined' ? SHEETS.TOURNAMENT_PREFIX : 'T_') + short;
+}
+
 /* =========================================================
  * Node test-export guard (ignored inside Apps Script)
  * =======================================================*/
@@ -98,6 +103,7 @@ if (typeof module !== 'undefined' && module.exports) {
     sanitizeText,
     sanitizeForSheet,
     validateDisplayName,
+    buildTabName,
     DISPLAY_NAME_MAX,
     DISPLAY_NAME_REGEX
   };

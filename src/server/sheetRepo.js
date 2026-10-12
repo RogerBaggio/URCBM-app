@@ -66,6 +66,24 @@ function updateMasterRow(id, updates) {
   cacheRemoveSnapshot(id);
 }
 
+function findTournamentById(id) {
+  if (!id) return null;
+  const rows = readMasterRows();
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].id === id) return rows[i];
+  }
+  return null;
+}
+
+function findTournamentByInviteToken(token) {
+  if (!token) return null;
+  const rows = readMasterRows();
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].inviteToken === token) return rows[i];
+  }
+  return null;
+}
+
 /* =========================================================
  * TOURNAMENT TAB — create + read meta
  * =======================================================*/
@@ -99,4 +117,47 @@ function getTournamentSheet(tabName) {
   const sheet = getSpreadsheet().getSheetByName(tabName);
   if (!sheet) throw new Error('Tournament tab not found: ' + tabName);
   return sheet;
+}
+
+function writeTournamentMeta(t) {
+  const sheet = getTournamentSheet(t.tabName);
+  sheet.getRange(LAYOUT.META_VALUES_ROW_1, 1, 1, 4)
+       .setValues([[t.name, t.game, t.state, t.inviteToken]]);
+  sheet.getRange(LAYOUT.META_VALUES_ROW_2, 1, 1, 4)
+       .setValues([[t.created, t.closed, t.generated, t.completed]]);
+}
+
+/* =========================================================
+ * PARTICIPANTS — read
+ * =======================================================*/
+
+function readParticipants(tabName) {
+  const sheet = getTournamentSheet(tabName);
+  const values = sheet
+    .getRange(LAYOUT.PARTICIPANTS_START, 1, LAYOUT.PARTICIPANTS_MAX, PARTICIPANT_HEADERS.length)
+    .getValues();
+
+  const out = [];
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    if (!row[0]) continue; // empty row → skip
+    out.push({
+      email:       String(row[0]).toLowerCase(),
+      googleName:  row[1],
+      displayName: row[2],
+      role:        row[3],
+      joinedAt:    toIsoString(row[4])
+    });
+  }
+  return out;
+}
+
+function readParticipantByEmail(tabName, email) {
+  const target = String(email || '').toLowerCase();
+  if (!target) return null;
+  const list = readParticipants(tabName);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].email === target) return list[i];
+  }
+  return null;
 }
