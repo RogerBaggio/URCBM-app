@@ -100,13 +100,3 @@ function getTournamentSheet(tabName) {
   if (!sheet) throw new Error('Tournament tab not found: ' + tabName);
   return sheet;
 }
-
-/* =========================================================
- * Utilities
- * =======================================================*/
-
-function toIsoString(value) {
-  if (!value) return '';
-  if (value instanceof Date) return value.toISOString();
-  return String(value);
-}
