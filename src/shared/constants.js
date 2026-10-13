@@ -64,3 +64,13 @@ const CACHE_KEYS = {
 const PROP_KEYS = {
   SPREADSHEET_ID: 'URCBM_SPREADSHEET_ID'
 };
+
+// Invite decisions statuses
+const INVITE_DECISIONS = {
+  REGISTER:            'register',
+  ALREADY_REGISTERED:  'already-registered',
+  REGISTRATION_CLOSED: 'registration-closed',
+  WATCH:               'watch',
+  CANCELLED:           'cancelled',
+  INVALID:             'invalid'
+};
