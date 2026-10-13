@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('styles') ?>
+</head>
+<body>
+  <header id="app-header">
+    <h1>URCBM</h1>
+    <p class="subtitle">Ultimate Rojudo's Championship Bracket Manager</p>
+  </header>
+
+  <main id="app-main">
+    <p class="loading">Loading…</p>
+  </main>
+
+  <footer id="app-footer">
+    <span id="poll-status"></span>
+    <button id="refresh-btn" type="button" hidden>Refresh</button>
+  </footer>
+
+  <script>
+    window.BOOTSTRAP = <?!= bootstrap ?>;
+  </script>
+  <?!= include('app') ?>
+</body>
+</html>
