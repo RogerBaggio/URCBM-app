@@ -5,7 +5,7 @@
  * =======================================================*/
 
 function apiGetTournament(id) {
-  return getTournament(id); // already returns a plain object
+  return getTournament(id);
 }
 
 function apiGetInviteDecision(token) {
@@ -22,4 +22,20 @@ function apiCreateTournament(input) {
 
 function apiCloseRegistration(id) {
   return closeRegistration(id);
+}
+
+function apiRegisterPlayer(input) {
+  return registerPlayer(input);
+}
+
+function apiGetParticipants(id) {
+  return getParticipants(id);
+}
+
+function apiRemovePlayer(id, email) {
+  return removePlayer(id, email);
+}
+
+function apiPromoteToManager(id, email) {
+  return promoteToManager(id, email);
 }

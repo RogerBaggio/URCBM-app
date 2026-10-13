@@ -161,3 +161,33 @@ function readParticipantByEmail(tabName, email) {
   }
   return null;
 }
+
+/* =========================================================
+ * PARTICIPANTS — write
+ * =======================================================*/
+
+function writeParticipants(tournament, list) {
+  const sheet = getTournamentSheet(tournament.tabName);
+
+  // Wipe the block first
+  const blank = [];
+  for (let i = 0; i < LAYOUT.PARTICIPANTS_MAX; i++) {
+    blank.push(['', '', '', '', '']);
+  }
+  sheet.getRange(
+    LAYOUT.PARTICIPANTS_START, 1,
+    LAYOUT.PARTICIPANTS_MAX, PARTICIPANT_HEADERS.length
+  ).setValues(blank);
+
+  if (list.length) {
+    const rows = list.map(p => [
+      p.email, p.googleName, p.displayName, p.role, p.joinedAt
+    ]);
+    sheet.getRange(
+      LAYOUT.PARTICIPANTS_START, 1,
+      rows.length, PARTICIPANT_HEADERS.length
+    ).setValues(rows);
+  }
+
+  cacheRemoveSnapshot(tournament.id);
+}

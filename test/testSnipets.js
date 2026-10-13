@@ -50,3 +50,52 @@ function _testInviteFlow() {
   Logger.log(validateInviteToken('NOPE').decision);
   // → 'invalid'
 }
+
+function _testRegisterPlayerAs(token, displayName, fakeEmail) {
+  const original = Session.getActiveUser;
+  try {
+    Session.getActiveUser = function () {
+      return { getEmail: function () { return fakeEmail; } };
+    };
+    return registerPlayer({ inviteToken: token, displayName: displayName });
+  } finally {
+    Session.getActiveUser = original;
+  }
+}
+
+function _runParticipantSmokeTest() {
+  const t = getTournament("3afec435-5318-4cc5-acb8-c353423d6eb7"); 
+  //const t = createTournament({ name: 'Party', game: 'Smash' });
+  Logger.log('Token: ' + t.inviteToken);
+
+  // Register two fake players
+  _testRegisterPlayerAs(t.inviteToken, 'Alice', 'alice@example.com');
+  _testRegisterPlayerAs(t.inviteToken, 'Bob',   'bob@example.com');
+
+  // Duplicate display name → error
+  try {
+    _testRegisterPlayerAs(t.inviteToken, 'alice', 'charlie@example.com');
+  } catch (e) {
+    Logger.log('Duplicate rejected: ' + e.message);
+  }
+
+  // Duplicate email → error
+  try {
+    _testRegisterPlayerAs(t.inviteToken, 'Charlie', 'alice@example.com');
+  } catch (e) {
+    Logger.log('Duplicate email rejected: ' + e.message);
+  }
+
+  // List as owner
+  Logger.log(getParticipants(t.id));  // includes emails
+
+  // Promote Alice
+  promoteToManager(t.id, 'alice@example.com');
+  Logger.log('Alice promoted');
+
+  // Remove Bob
+  removePlayer(t.id, 'bob@example.com');
+  Logger.log('Bob removed');
+
+  Logger.log(getParticipants(t.id));
+}
