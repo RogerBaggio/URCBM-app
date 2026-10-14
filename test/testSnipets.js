@@ -125,3 +125,32 @@ function _runMatchSmokeTest() {
   Logger.log('after undo:');
   Logger.log(getMatches(t.id).filter(m => m.round <= 2));
 }
+
+function _testSnapshot() {
+  const t = createTournament({ name: 'Snap', game: 'Test' });
+  ['A','B','C','D'].forEach(n => {
+    _testRegisterPlayerAs(t.inviteToken, n, n.toLowerCase() + '@example.com');
+  });
+  closeRegistration(t.id);
+  generateBracket(t.id);
+
+  // First call: cache miss
+  const a = getTournamentSnapshot(t.id);
+  Logger.log('version 1: ' + a.version);
+  Logger.log('participants: ' + a.participants.length);
+  Logger.log('matches: ' + a.matches.length);
+  Logger.log('role: ' + a.role); // owner
+
+  // Second call: cache hit
+  const b = getTournamentSnapshot(t.id);
+  Logger.log('version 2: ' + b.version); // should match
+  Logger.log('same version: ' + (a.version === b.version));
+
+  // Change a result → version changes
+  const r1 = a.matches.filter(m => m.round === 1 &&
+    m.playerA && m.playerB && m.playerA !== 'BYE' && m.playerB !== 'BYE')[0];
+  updateMatchResult(t.id, matchIndexString(r1.round, r1.matchInRound), 2, 0);
+
+  const c = getTournamentSnapshot(t.id);
+  Logger.log('version 3: ' + c.version); // different
+}
