@@ -194,3 +194,104 @@ test('findMatchIndex locates correct index', () => {
   assert.strictEqual(findMatchIndex(matches, 2, 1), 2);
   assert.strictEqual(findMatchIndex(matches, 2, 9), -1);
 });
+
+const {
+  validateScore,
+  advanceWinner,
+  clearDownstream
+} = require('../src/server/bracket.js');
+
+/* ---------------------------------------------------------
+ * validateScore
+ * -------------------------------------------------------*/
+
+test('validateScore accepts non-negative integers and numeric strings', () => {
+  assert.strictEqual(validateScore(0), 0);
+  assert.strictEqual(validateScore(5), 5);
+  assert.strictEqual(validateScore('3'), 3);
+});
+
+test('validateScore rejects blanks, negatives, non-integers, non-numbers', () => {
+  assert.throws(() => validateScore(''), /SCORE_REQUIRED/);
+  assert.throws(() => validateScore(null), /SCORE_REQUIRED/);
+  assert.throws(() => validateScore(-1), /INVALID_SCORE/);
+  assert.throws(() => validateScore(2.5), /INVALID_SCORE/);
+  assert.throws(() => validateScore('abc'), /INVALID_SCORE/);
+});
+
+/* ---------------------------------------------------------
+ * advanceWinner
+ * -------------------------------------------------------*/
+
+function makeMiniBracket() {
+  // 4-player bracket: R1-M1, R1-M2, R2-M1
+  return [
+    { round: 1, matchInRound: 1, playerA: 'A', playerB: 'B', winner: '', playerAScore: '', playerBScore: '', updatedAt: '', updatedBy: '' },
+    { round: 1, matchInRound: 2, playerA: 'C', playerB: 'D', winner: '', playerAScore: '', playerBScore: '', updatedAt: '', updatedBy: '' },
+    { round: 2, matchInRound: 1, playerA: '', playerB: '', winner: '', playerAScore: '', playerBScore: '', updatedAt: '', updatedBy: '' }
+  ];
+}
+
+test('advanceWinner puts odd matchInRound winner into playerA of next round', () => {
+  const m = makeMiniBracket();
+  advanceWinner(m, 1, 1, 'A');
+  assert.strictEqual(m[2].playerA, 'A');
+  assert.strictEqual(m[2].playerB, '');
+});
+
+test('advanceWinner puts even matchInRound winner into playerB of next round', () => {
+  const m = makeMiniBracket();
+  advanceWinner(m, 1, 2, 'C');
+  assert.strictEqual(m[2].playerB, 'C');
+  assert.strictEqual(m[2].playerA, '');
+});
+
+test('advanceWinner is a no-op at the final', () => {
+  const m = makeMiniBracket();
+  advanceWinner(m, 2, 1, 'A'); // final, no downstream
+  assert.strictEqual(m[2].playerA, ''); // unchanged
+});
+
+/* ---------------------------------------------------------
+ * clearDownstream
+ * -------------------------------------------------------*/
+
+test('clearDownstream removes old winner from next match slot', () => {
+  const m = makeMiniBracket();
+  m[0].winner = 'A';
+  m[2].playerA = 'A';
+  clearDownstream(m, 1, 1, 'A');
+  assert.strictEqual(m[2].playerA, '');
+  assert.strictEqual(m[2].winner, '');
+});
+
+test('clearDownstream cascades if the propagated player also won downstream', () => {
+  // 8-player: R1-M1..M4, R2-M1..M2, R3-M1
+  const m = [
+    { round: 1, matchInRound: 1, playerA: 'A', playerB: 'B', winner: 'A', playerAScore: 1, playerBScore: 0, updatedAt: '', updatedBy: '' },
+    { round: 1, matchInRound: 2, playerA: 'C', playerB: 'D', winner: 'C', playerAScore: 1, playerBScore: 0, updatedAt: '', updatedBy: '' },
+    { round: 1, matchInRound: 3, playerA: 'E', playerB: 'F', winner: 'E', playerAScore: 1, playerBScore: 0, updatedAt: '', updatedBy: '' },
+    { round: 1, matchInRound: 4, playerA: 'G', playerB: 'H', winner: 'G', playerAScore: 1, playerBScore: 0, updatedAt: '', updatedBy: '' },
+    { round: 2, matchInRound: 1, playerA: 'A', playerB: 'C', winner: 'A', playerAScore: 1, playerBScore: 0, updatedAt: '', updatedBy: '' },
+    { round: 2, matchInRound: 2, playerA: 'E', playerB: 'G', winner: '', playerAScore: '', playerBScore: '', updatedAt: '', updatedBy: '' },
+    { round: 3, matchInRound: 1, playerA: 'A', playerB: '', winner: '', playerAScore: '', playerBScore: '', updatedAt: '', updatedBy: '' }
+  ];
+  clearDownstream(m, 1, 1, 'A');
+
+  assert.strictEqual(m[4].playerA, '');      // slot cleared
+  assert.strictEqual(m[4].winner, '');       // winner cleared
+  assert.strictEqual(m[4].playerAScore, ''); // score cleared
+  assert.strictEqual(m[6].playerA, '');      // cascade to final
+});
+
+test('clearDownstream does not cascade if propagated player lost downstream', () => {
+  const m = makeMiniBracket();
+  m[0].winner = 'A';
+  m[2].playerA = 'A';
+  m[2].playerB = 'B';
+  m[2].winner = 'B'; // A lost the final
+  clearDownstream(m, 1, 1, 'A');
+
+  assert.strictEqual(m[2].playerA, '');
+  assert.strictEqual(m[2].winner, 'B'); // untouched
+});

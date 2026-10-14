@@ -82,6 +82,12 @@ function closeRegistration(id) {
   if (t.state !== TOURNAMENT_STATES.REGISTRATION_OPEN) {
     throw new Error('INVALID_STATE');
   }
+
+  const participants = readParticipants(t.tabName);
+  if (participants.length < MIN_PLAYERS) {
+    throw new Error('MIN_PLAYERS_REQUIRED');
+  }
+
   t.state  = TOURNAMENT_STATES.REGISTRATION_CLOSED;
   t.closed = nowIso();
   updateMasterRow(id, { state: t.state, closed: t.closed });

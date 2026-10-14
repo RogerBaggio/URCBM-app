@@ -99,3 +99,29 @@ function _runParticipantSmokeTest() {
 
   Logger.log(getParticipants(t.id));
 }
+
+function _runMatchSmokeTest() {
+  const t = getTournament("3afec435-5318-4cc5-acb8-c353423d6eb7"); 
+  //const t = createTournament({ name: 'Smoke', game: 'Test' });
+  ['A','B','C','D','E','F','G','H','I','J'].forEach((n, i) => {
+    _testRegisterPlayerAs(t.inviteToken, n, n.toLowerCase() + '@example.com');
+  });
+  closeRegistration(t.id);
+  generateBracket(t.id);
+
+  const matches = getMatches(t.id);
+  Logger.log('bracket size matches: ' + matches.length); // expect 15 for 10 players
+
+  // Find a ready R1 match
+  const r1 = matches.filter(m => m.round === 1 && m.playerA && m.playerB &&
+                                 m.playerA !== 'BYE' && m.playerB !== 'BYE')[0];
+  Logger.log('ready match: ' + r1.playerA + ' vs ' + r1.playerB);
+
+  updateMatchResult(t.id, matchIndexString(r1.round, r1.matchInRound), 3, 1);
+  Logger.log('after result:');
+  Logger.log(getMatches(t.id).filter(m => m.round <= 2));
+
+  undoMatchResult(t.id, matchIndexString(r1.round, r1.matchInRound));
+  Logger.log('after undo:');
+  Logger.log(getMatches(t.id).filter(m => m.round <= 2));
+}

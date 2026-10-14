@@ -154,6 +154,65 @@ function findMatchIndex(matches, round, matchInRound) {
 }
 
 /* =========================================================
+ * Scoring
+ * =======================================================*/
+
+function validateScore(value) {
+  if (value === '' || value === null || value === undefined) {
+    throw new Error('SCORE_REQUIRED');
+  }
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 0) throw new Error('INVALID_SCORE');
+  return n;
+}
+
+/* =========================================================
+ * Advancement
+ * =======================================================*/
+
+/**
+ * Writes a winner into the correct slot of the next-round match.
+ * Mutates `matches` in place.
+ */
+function advanceWinner(matches, round, matchInRound, winner) {
+  const nextRound = round + 1;
+  const nextMatchInRound = Math.ceil(matchInRound / 2);
+  const idx = findMatchIndex(matches, nextRound, nextMatchInRound);
+  if (idx === -1) return; // final match, no downstream
+  const slot = (matchInRound % 2 === 1) ? 'playerA' : 'playerB';
+  matches[idx][slot] = winner;
+}
+
+/**
+ * Clears the downstream slot that a previously-advanced winner occupied,
+ * and recursively clears further rounds if that player also won there.
+ * Mutates `matches` in place.
+ */
+function clearDownstream(matches, round, matchInRound, oldWinner) {
+  const nextRound = round + 1;
+  const nextMatchInRound = Math.ceil(matchInRound / 2);
+  const idx = findMatchIndex(matches, nextRound, nextMatchInRound);
+  if (idx === -1) return;
+
+  const next = matches[idx];
+  const slot = (matchInRound % 2 === 1) ? 'playerA' : 'playerB';
+
+  if (next[slot] !== oldWinner) return;
+
+  const nextWasWonByOldWinner = (next.winner === oldWinner);
+  next[slot] = '';
+
+  if (nextWasWonByOldWinner) {
+    next.winner = '';
+    next.playerAScore = '';
+    next.playerBScore = '';
+    next.updatedAt = '';
+    next.updatedBy = '';
+    clearDownstream(matches, nextRound, nextMatchInRound, oldWinner);
+  }
+}
+
+/* =========================================================
  * Node test-export guard
  * =======================================================*/
 
@@ -167,6 +226,9 @@ if (typeof module !== 'undefined' && module.exports) {
     propagateByes,
     matchIndexString,
     parseMatchIndex,
-    findMatchIndex
+    findMatchIndex,
+    validateScore,
+    advanceWinner,
+    clearDownstream
   };
 }

@@ -21,6 +21,9 @@ const PARTICIPANT_ROLES = {
   MANAGER: 'manager'
 };
 
+// Business rules
+const MIN_PLAYERS = 3;
+
 // Sheet names
 const SHEETS = {
   MASTER:             '_Tournaments',
