@@ -1,0 +1,21 @@
+<script>
+(function (global) {
+  'use strict';
+
+  function render(boot) {
+    var t = boot.tournament || {};
+    global.H.setMain(
+      '<div class="card">' +
+        '<h2>' + global.H.escapeHtml(t.name || 'Tournament') + '</h2>' +
+        '<p class="muted">Game: ' + global.H.escapeHtml(t.game || '') + '</p>' +
+        '<p class="muted">State: ' + global.H.escapeHtml(t.state || '') + '</p>' +
+        '<p class="muted">Your role: ' + global.H.escapeHtml(boot.role || 'guest') + '</p>' +
+        '<p><a href="?">← Back to hub</a></p>' +
+      '</div>'
+    );
+  }
+
+  global.Pages = global.Pages || {};
+  global.Pages.Tournament = { render: render };
+})(window);
+</script>

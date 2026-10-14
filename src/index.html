@@ -1,28 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <base target="_top">
   <meta charset="utf-8">
+  <title>URCBM</title>
   <?!= include('styles') ?>
 </head>
 <body>
   <header id="app-header">
-    <h1>URCBM</h1>
-    <p class="subtitle">Ultimate Rojudo's Championship Bracket Manager</p>
+    <a href="?" class="brand">
+      <span class="brand-title">URCBM</span>
+      <span class="brand-sub">Ultimate Rojudo's Championship Bracket Manager</span>
+    </a>
   </header>
 
-  <main id="app-main">
+  <main id="app-main" aria-live="polite">
     <p class="loading">Loading…</p>
   </main>
 
   <footer id="app-footer">
-    <span id="poll-status"></span>
+    <span id="poll-status">Ready</span>
     <button id="refresh-btn" type="button" hidden>Refresh</button>
   </footer>
 
-  <script>
-    window.BOOTSTRAP = <?!= bootstrap ?>;
-  </script>
+  <script>window.BOOTSTRAP = <?!= bootstrap ?>;</script>
+
+  <?!= include('helpers') ?>
+  <?!= include('client-api') ?>
+  <?!= include('pages-hub') ?>
+  <?!= include('pages-invite') ?>
+  <?!= include('pages-tournament') ?>
   <?!= include('app') ?>
 </body>
 </html>

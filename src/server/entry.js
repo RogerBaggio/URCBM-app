@@ -1,3 +1,10 @@
+function jsonForScript(obj) {
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
 /* =========================================================
  * doGet — entry point for all page loads
  * =======================================================*/
@@ -7,7 +14,7 @@ function doGet(e) {
   const route  = resolveRoute(params);
 
   const template = HtmlService.createTemplateFromFile('index');
-  template.bootstrap = JSON.stringify(route);
+  template.bootstrap = jsonForScript(route);
   template.include   = include; // helper for client partials
 
   return template

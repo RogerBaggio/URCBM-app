@@ -1,62 +1,65 @@
 <script>
-(function () {
+(function (global) {
   'use strict';
 
-  var boot = window.BOOTSTRAP || { page: 'hub' };
+  var boot = global.BOOTSTRAP || { page: 'hub' };
 
   function render() {
-    var main = document.getElementById('app-main');
-    switch (boot.page) {
-      case 'invite':
-        main.innerHTML =
-          '<div class="card">' +
-            '<h2>Invite</h2>' +
-            '<p class="muted">Decision: <code>' + escapeHtml(boot.decision || 'invalid') + '</code></p>' +
-            (boot.tournament
-              ? '<p>Tournament: <strong>' + escapeHtml(boot.tournament.name) + '</strong></p>'
-              : '') +
-          '</div>';
-        break;
-
-      case 'tournament':
-        main.innerHTML =
-          '<div class="card">' +
-            '<h2>' + escapeHtml(boot.tournament.name) + '</h2>' +
-            '<p class="muted">Game: ' + escapeHtml(boot.tournament.game) + '</p>' +
-            '<p class="muted">State: ' + escapeHtml(boot.tournament.state) + '</p>' +
-            '<p class="muted">Your role: ' + escapeHtml(boot.role) + '</p>' +
-          '</div>';
-        break;
-
-      case 'not-found':
-        main.innerHTML =
-          '<div class="card"><h2>Not found</h2>' +
-          '<p class="muted">That tournament does not exist or was removed.</p></div>';
-        break;
-
-      default: // hub
-        main.innerHTML =
-          '<div class="card"><h2>Hub</h2>' +
-          '<p class="muted">Tournament list coming in Step 12.</p></div>';
+    var pages = global.Pages || {};
+    try {
+      switch (boot.page) {
+        case 'invite':
+          if (pages.Invite) return pages.Invite.render(boot);
+          break;
+        case 'tournament':
+          if (pages.Tournament) return pages.Tournament.render(boot);
+          break;
+        case 'not-found':
+          return global.H.setMain(
+            '<div class="card"><h2>Not found</h2>' +
+            '<p class="muted">That tournament does not exist or was removed.</p>' +
+            '<p><a href="?">← Back to hub</a></p></div>'
+          );
+        default:
+          if (pages.Hub) return pages.Hub.render(boot);
+      }
+      global.H.setMain(global.H.errorBlock('No renderer for page: ' + boot.page));
+    } catch (e) {
+      global.H.setMain(global.H.errorBlock(e.message || 'Render failed.'));
     }
   }
 
-  function escapeHtml(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  function wireFooter() {
+    var btn = global.H.qs('#refresh-btn');
+    if (!btn) return;
+    var lastClick = 0;
+    btn.hidden = false;
+    btn.addEventListener('click', function () {
+      var now = Date.now();
+      if (now - lastClick < 10000) return;
+      lastClick = now;
+      btn.disabled = true;
+      setTimeout(function () { btn.disabled = false; }, 10000);
+      global.H.setStatus('Refreshed at ' + new Date().toLocaleTimeString());
+      // Real refresh wired by page modules in Step 16.
+      if (global.App && typeof global.App.onRefresh === 'function') {
+        global.App.onRefresh();
+      }
+    });
   }
 
-  document.getElementById('refresh-btn').hidden = false;
-  document.getElementById('refresh-btn').addEventListener('click', function () {
-    this.disabled = true;
-    var btn = this;
-    setTimeout(function () { btn.disabled = false; }, 10000);
-    // Real refresh logic arrives with the polling module.
-    document.getElementById('poll-status').textContent = 'Refreshed at ' + new Date().toLocaleTimeString();
-  });
+  global.App = global.App || {};
+  global.App.onRefresh = null; // pages can assign
 
-  render();
-  document.getElementById('poll-status').textContent = 'Ready';
-})();
+  function boot_() {
+    wireFooter();
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot_);
+  } else {
+    boot_();
+  }
+})(window);
 </script>

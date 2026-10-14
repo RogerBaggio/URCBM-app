@@ -1,0 +1,25 @@
+<script>
+(function (global) {
+  'use strict';
+
+  function render(boot) {
+    var d = boot.decision || 'invalid';
+    var t = boot.tournament;
+
+    var html = '<div class="card">' +
+      '<h2>Invite</h2>' +
+      '<p class="muted">Decision: <code>' + global.H.escapeHtml(d) + '</code></p>';
+
+    if (t) {
+      html += '<p>Tournament: <strong>' + global.H.escapeHtml(t.name) + '</strong> ' +
+              '<span class="muted">(' + global.H.escapeHtml(t.state) + ')</span></p>';
+    }
+    html += '</div>';
+
+    global.H.setMain(html);
+  }
+
+  global.Pages = global.Pages || {};
+  global.Pages.Invite = { render: render };
+})(window);
+</script>

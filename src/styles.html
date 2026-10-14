@@ -6,43 +6,56 @@
     --text: #e6e8ee;
     --text-dim: #9aa0b0;
     --accent: #6c8cff;
+    --accent-2: #8ea4ff;
     --border: #2c3040;
+    --danger: #ff6b6b;
     --radius: 10px;
     --max-width: 1100px;
   }
 
   * { box-sizing: border-box; }
 
-  body {
+  html, body {
     margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 0;
     background: var(--bg);
     color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     line-height: 1.5;
+    min-height: 100%;
   }
 
+  a { color: var(--accent-2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
   #app-header {
-    padding: 20px 16px 12px;
+    padding: 18px 16px 12px;
     max-width: var(--max-width);
     margin: 0 auto;
   }
 
-  #app-header h1 {
-    margin: 0;
-    font-size: 1.4rem;
-    letter-spacing: 0.02em;
+  .brand {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
   }
-
-  .subtitle {
-    margin: 2px 0 0;
+  .brand:hover { text-decoration: none; }
+  .brand-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+  .brand-sub {
+    font-size: 0.8rem;
     color: var(--text-dim);
-    font-size: 0.85rem;
   }
 
   #app-main {
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 8px 16px 64px;
+    padding: 8px 16px 96px;
   }
 
   .loading {
@@ -75,11 +88,8 @@
     font-size: 0.8rem;
     cursor: pointer;
   }
-
-  #refresh-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  #refresh-btn:hover { background: var(--accent-2); }
+  #refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .card {
     background: var(--surface);
@@ -88,6 +98,18 @@
     padding: 16px;
     margin-bottom: 12px;
   }
+  .card h2 { margin-top: 0; }
+
+  .card.error {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
 
   .muted { color: var(--text-dim); }
+  code {
+    background: var(--surface-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
 </style>

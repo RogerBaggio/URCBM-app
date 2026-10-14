@@ -1,0 +1,57 @@
+<script>
+(function (global) {
+  'use strict';
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function qs(sel, root) { return (root || document).querySelector(sel); }
+
+  function setMain(html) {
+    var main = qs('#app-main');
+    main.innerHTML = '';
+    if (typeof html === 'string') main.innerHTML = html;
+    else if (html && html.nodeType) main.appendChild(html);
+  }
+
+  function setStatus(text) {
+    qs('#poll-status').textContent = text || '';
+  }
+
+  function spinner(text) {
+    return '<p class="loading">' + escapeHtml(text || 'Loading…') + '</p>';
+  }
+
+  function errorBlock(message) {
+    return '<div class="card error">' +
+      '<p>' + escapeHtml(message || 'Something went wrong.') + '</p>' +
+      '</div>';
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      return d.toLocaleString();
+    } catch (e) { return String(iso); }
+  }
+
+  global.H = {
+    escapeHtml: escapeHtml,
+    qs: qs,
+    setMain: setMain,
+    setStatus: setStatus,
+    spinner: spinner,
+    errorBlock: errorBlock,
+    formatDate: formatDate
+  };
+})(window);
+</script>

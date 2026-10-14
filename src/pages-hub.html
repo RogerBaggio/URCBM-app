@@ -1,0 +1,18 @@
+<script>
+(function (global) {
+  'use strict';
+
+  function render() {
+    global.H.setMain(
+      '<div class="card">' +
+        '<h2>Hub</h2>' +
+        '<p class="muted">Tournament list coming in Step 12.</p>' +
+        '<p class="muted">Role: ' + global.H.escapeHtml(window.BOOTSTRAP.role || 'guest') + '</p>' +
+      '</div>'
+    );
+  }
+
+  global.Pages = global.Pages || {};
+  global.Pages.Hub = { render: render };
+})(window);
+</script>

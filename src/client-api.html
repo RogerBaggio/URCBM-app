@@ -1,0 +1,27 @@
+<script>
+(function (global) {
+  'use strict';
+
+  /**
+   * api.call('apiGetSnapshot', id).then(function (snap) { ... });
+   * Rejects with Error whose message is the server-thrown code.
+   */
+  function call(fnName) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (resolve, reject) {
+      var runner = google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(function (err) {
+          var msg = (err && err.message) ? err.message : String(err);
+          reject(new Error(msg));
+        });
+      if (typeof runner[fnName] !== 'function') {
+        return reject(new Error('UNKNOWN_API: ' + fnName));
+      }
+      runner[fnName].apply(runner, args);
+    });
+  }
+
+  global.api = { call: call };
+})(window);
+</script>
