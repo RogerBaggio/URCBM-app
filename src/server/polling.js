@@ -22,9 +22,9 @@ function buildRawSnapshot(t) {
       id:        t.id,
       name:      t.name,
       game:      t.game,
+      date:      t.date,
       state:     t.state,
       created:   t.created,
-      closed:    t.closed,
       generated: t.generated,
       completed: t.completed
     },

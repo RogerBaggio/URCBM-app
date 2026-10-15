@@ -33,7 +33,7 @@ const SHEETS = {
 // Master tab headers (order matters — index +1 = column number)
 const MASTER_HEADERS = [
   'ID', 'Tournament Name', 'Game', 'Date', 'State', 'Tab Name',
-  'Invite Token', 'Owner Email', 'Created', 'Closed', 'Generated', 'Completed'
+  'Invite Token', 'Owner Email', 'Created', 'Generated', 'Completed'
 ];
 
 // Tournament tab headers
@@ -45,8 +45,8 @@ const MATCH_HEADERS = [
 
 // Fixed-row layout inside each tournament tab
 const LAYOUT = {
-  META_VALUES_ROW_1:     2,   // Name | Game | State | Invite Token
-  META_VALUES_ROW_2:     4,   // Created | Closed | Generated | Completed
+  META_VALUES_ROW_1:     2,   // Name | Game | Date | State | Invite Token
+  META_VALUES_ROW_2:     4,   // Created | Generated | Completed
   PARTICIPANTS_HEADER:   6,
   PARTICIPANTS_START:    7,
   PARTICIPANTS_MAX:      32,

@@ -62,8 +62,7 @@ function removePlayer(tournamentId, targetEmail) {
   assertOwner(tournamentId);
   const t = requireTournament(tournamentId);
 
-  if (t.state !== TOURNAMENT_STATES.REGISTRATION_OPEN &&
-      t.state !== TOURNAMENT_STATES.REGISTRATION_CLOSED) {
+  if (t.state !== TOURNAMENT_STATES.REGISTRATION_OPEN) {
     throw new Error('INVALID_STATE');
   }
 

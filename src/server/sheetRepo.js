@@ -23,9 +23,8 @@ function rowToMaster(row) {
     inviteToken: row[6],
     ownerEmail:  row[7],
     created:     toIsoString(row[8]),
-    closed:      toIsoString(row[9]),
-    generated:   toIsoString(row[10]),
-    completed:   toIsoString(row[11])
+    generated:   toIsoString(row[9]),
+    completed:   toIsoString(row[10])
   };
 }
 

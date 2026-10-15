@@ -6,15 +6,12 @@ function _testAuthNoTournament() {
 }
 
 function _testTournamentLifecycle() {
-  const t = createTournament({ name: 'Friday Night', game: 'Street Fighter' });
+  const t = createTournament({ name: 'Monday Night', game: 'Killer Instinct' , date: '2026-10-21' });
   Logger.log(t);                                   // owner view, includes inviteToken
 
   const fetched = getTournament(t.id);
   Logger.log(fetched.state);                       // RegistrationOpen
   Logger.log(fetched.role);                        // owner
-
-  const closed = closeRegistration(t.id);
-  Logger.log(closed.state);                        // RegistrationClosed
 
   const tok = generateInviteToken(t.id);
   Logger.log(tok);                                 // new token
