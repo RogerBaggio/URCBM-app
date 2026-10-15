@@ -1,0 +1,29 @@
+<script>
+(function (global) {
+  'use strict';
+
+  var MESSAGES = {
+    NOT_FOUND:      "That page or tournament doesn't exist.",
+    INVALID_TOKEN:  "That invite link isn't valid.",
+    CANCELLED:      "This tournament was cancelled.",
+    REGISTRATION_CLOSED: "Registration for this tournament is closed.",
+    FORBIDDEN:      "You don't have permission for that.",
+    UNKNOWN:        "Something went wrong. Try again from the hub."
+  };
+
+  function render(boot) {
+    var code = (boot && boot.code) || 'UNKNOWN';
+    var msg = MESSAGES[code] || MESSAGES.UNKNOWN;
+    global.H.setMain(
+      '<div class="card error">' +
+        '<h2>Uh oh.</h2>' +
+        '<p>' + global.H.escapeHtml(msg) + '</p>' +
+        '<p><a href="?">← Back to Hub</a></p>' +
+      '</div>'
+    );
+  }
+
+  global.Pages = global.Pages || {};
+  global.Pages.Error = { render: render };
+})(window);
+</script>

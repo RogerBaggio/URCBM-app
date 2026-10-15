@@ -101,19 +101,16 @@ function generateBracket(tournamentId) {
 }
 
 /* =========================================================
- * Result entry / edit / undo
+ * Winner pick (explicit, by dropdown)
  * =======================================================*/
 
-function updateMatchResult(tournamentId, matchIndex, scoreA, scoreB) {
+function pickWinner(tournamentId, matchIndex, winnerName) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const ctx = assertCanWrite(tournamentId);
     const t = requireTournament(tournamentId);
-
-    if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) {
-      throw new Error('INVALID_STATE');
-    }
+    if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) throw new Error('INVALID_STATE');
 
     const parsed = parseMatchIndex(matchIndex);
     if (!parsed) throw new Error('INVALID_MATCH_INDEX');
@@ -128,24 +125,20 @@ function updateMatchResult(tournamentId, matchIndex, scoreA, scoreB) {
       throw new Error('MATCH_NOT_READY');
     }
 
-    const sa = validateScore(scoreA);
-    const sb = validateScore(scoreB);
-    if (sa === sb) throw new Error('TIE_NOT_ALLOWED');
+    const name = String(winnerName || '').trim();
+    if (name !== match.playerA && name !== match.playerB) {
+      throw new Error('INVALID_WINNER');
+    }
 
-    const newWinner = sa > sb ? match.playerA : match.playerB;
-
-    // If the winner is changing, clear downstream first
-    if (match.winner && match.winner !== newWinner) {
+    if (match.winner && match.winner !== name) {
       clearDownstream(matches, parsed.round, parsed.matchInRound, match.winner);
     }
 
-    match.playerAScore = sa;
-    match.playerBScore = sb;
-    match.winner       = newWinner;
-    match.updatedAt    = nowIso();
-    match.updatedBy    = ctx.email;
+    match.winner    = name;
+    match.updatedAt = nowIso();
+    match.updatedBy = ctx.email;
 
-    advanceWinner(matches, parsed.round, parsed.matchInRound, newWinner);
+    advanceWinner(matches, parsed.round, parsed.matchInRound, name);
 
     writeMatches(t, matches);
     return { ok: true, matches: matches };
@@ -154,16 +147,49 @@ function updateMatchResult(tournamentId, matchIndex, scoreA, scoreB) {
   }
 }
 
-function undoMatchResult(tournamentId, matchIndex) {
+/* =========================================================
+ * Scores (visual only)
+ * =======================================================*/
+
+function setMatchScores(tournamentId, matchIndex, scoreA, scoreB) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const ctx = assertCanWrite(tournamentId);
     const t = requireTournament(tournamentId);
+    if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) throw new Error('INVALID_STATE');
 
-    if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) {
-      throw new Error('INVALID_STATE');
-    }
+    const parsed = parseMatchIndex(matchIndex);
+    if (!parsed) throw new Error('INVALID_MATCH_INDEX');
+
+    const matches = readMatches(t.tabName);
+    const idx = findMatchIndex(matches, parsed.round, parsed.matchInRound);
+    if (idx === -1) throw new Error('MATCH_NOT_FOUND');
+
+    const match = matches[idx];
+    match.playerAScore = (scoreA === '' || scoreA == null) ? '' : validateScore(scoreA);
+    match.playerBScore = (scoreB === '' || scoreB == null) ? '' : validateScore(scoreB);
+    match.updatedAt    = nowIso();
+    match.updatedBy    = ctx.email;
+
+    writeMatches(t, matches);
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* =========================================================
+ * Clear winner (undo)
+ * =======================================================*/
+
+function clearWinner(tournamentId, matchIndex) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const ctx = assertCanWrite(tournamentId);
+    const t = requireTournament(tournamentId);
+    if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) throw new Error('INVALID_STATE');
 
     const parsed = parseMatchIndex(matchIndex);
     if (!parsed) throw new Error('INVALID_MATCH_INDEX');
@@ -176,12 +202,9 @@ function undoMatchResult(tournamentId, matchIndex) {
     if (!match.winner) throw new Error('NO_RESULT_TO_UNDO');
 
     clearDownstream(matches, parsed.round, parsed.matchInRound, match.winner);
-
-    match.playerAScore = '';
-    match.playerBScore = '';
-    match.winner       = '';
-    match.updatedAt    = nowIso();
-    match.updatedBy    = ctx.email;
+    match.winner    = '';
+    match.updatedAt = nowIso();
+    match.updatedBy = ctx.email;
 
     writeMatches(t, matches);
     return { ok: true, matches: matches };

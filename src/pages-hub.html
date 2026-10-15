@@ -2,14 +2,111 @@
 (function (global) {
   'use strict';
 
+  var boot = window.BOOTSTRAP || {};
+
+  function card(item, href) {
+    var name = global.H.escapeHtml(item.name || '(unnamed)');
+    var game = global.H.escapeHtml(item.game || '');
+    var date = item.date ? ' · ' + global.H.escapeHtml(item.date) : '';
+    return '<li class="tournament-row">' +
+      '<a href="' + href + '"><strong>' + name + '</strong></a>' +
+      '<span class="muted"> ' + game + date + '</span>' +
+    '</li>';
+  }
+
+  function section(title, items, hrefFn) {
+    if (!items.length) {
+      return '<section class="hub-section"><h2>' + title + '</h2>' +
+             '<p class="muted">None yet.</p></section>';
+    }
+    var rows = items.map(function (it) { return card(it, hrefFn(it)); }).join('');
+    return '<section class="hub-section"><h2>' + title + '</h2>' +
+           '<ul class="tournament-list">' + rows + '</ul></section>';
+  }
+
   function render() {
-    global.H.setMain(
-      '<div class="card">' +
-        '<h2>Hub</h2>' +
-        '<p class="muted">Tournament list coming in Step 12.</p>' +
-        '<p class="muted">Role: ' + global.H.escapeHtml(window.BOOTSTRAP.role || 'guest') + '</p>' +
-      '</div>'
-    );
+    global.H.setMain(global.H.spinner('Loading hub…'));
+    global.api.call('apiGetHub').then(function (data) {
+      draw(data);
+    }).catch(function (err) {
+      global.H.setMain(global.H.errorBlock(err.message));
+    });
+  }
+
+  function draw(data) {
+    var html = '';
+
+    if (data.isAppOwner) {
+      html += '<div class="hub-actions">' +
+        '<button id="create-tournament-btn" class="btn-primary">' +
+        '+ Create New Tournament</button>' +
+      '</div>';
+    }
+
+    html += section('Open Registrations', data.open,
+      function (it) { return '?t=' + encodeURIComponent(it.id); });
+    html += section('Ongoing Tournaments', data.ongoing,
+      function (it) { return '?t=' + encodeURIComponent(it.id); });
+    html += section('Completed Tournaments', data.completed,
+      function (it) { return '?t=' + encodeURIComponent(it.id); });
+
+    html += createDialogHtml();
+
+    global.H.setMain(html);
+    global.H.setStatus('Ready');
+
+    if (data.isAppOwner) wireCreateDialog();
+  }
+
+  function createDialogHtml() {
+    return '' +
+      '<dialog id="create-dialog" class="modal">' +
+        '<form id="create-form" method="dialog">' +
+          '<h3>Create Tournament</h3>' +
+          '<label>Name <input name="name" type="text" maxlength="80" required></label>' +
+          '<label>Game <input name="game" type="text" maxlength="80" required></label>' +
+          '<label>Date <input name="date" type="date"></label>' +
+          '<p class="form-error" id="create-error" hidden></p>' +
+          '<div class="modal-actions">' +
+            '<button type="button" data-close>Cancel</button>' +
+            '<button type="submit" class="btn-primary">Create</button>' +
+          '</div>' +
+        '</form>' +
+      '</dialog>';
+  }
+
+  function wireCreateDialog() {
+    var dlg = document.getElementById('create-dialog');
+    var form = document.getElementById('create-form');
+    var err  = document.getElementById('create-error');
+
+    document.getElementById('create-tournament-btn').addEventListener('click', function () {
+      form.reset();
+      err.hidden = true;
+      dlg.showModal();
+    });
+
+    form.querySelector('[data-close]').addEventListener('click', function () {
+      dlg.close();
+    });
+
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      err.hidden = true;
+      var fd = new FormData(form);
+      var payload = {
+        name: String(fd.get('name') || ''),
+        game: String(fd.get('game') || ''),
+        date: String(fd.get('date') || '')
+      };
+      global.api.call('apiCreateTournament', payload).then(function () {
+        dlg.close();
+        render();
+      }).catch(function (e) {
+        err.textContent = e.message;
+        err.hidden = false;
+      });
+    });
   }
 
   global.Pages = global.Pages || {};

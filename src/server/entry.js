@@ -1,10 +1,3 @@
-function jsonForScript(obj) {
-  return JSON.stringify(obj)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026');
-}
-
 /* =========================================================
  * doGet — entry point for all page loads
  * =======================================================*/
@@ -53,15 +46,12 @@ function resolveRoute(params) {
   if (tournamentId) {
     const t = findTournamentById(tournamentId);
     if (!t) {
-      return { page: 'not-found', tournamentId: null, inviteToken: null,
-               decision: null, role: ROLES.GUEST, tournament: null };
+      return { page: 'error', code: 'NOT_FOUND', role: ROLES.GUEST };
     }
     const ctx = getCurrentUserContext(tournamentId);
     return {
       page:         'tournament',
       tournamentId: tournamentId,
-      inviteToken:  null,
-      decision:     null,
       role:         ctx.role,
       tournament:   publicTournament(t, ctx)
     };
@@ -70,11 +60,8 @@ function resolveRoute(params) {
   // 3) Default → hub
   return {
     page:         'hub',
-    tournamentId: null,
-    inviteToken:  null,
-    decision:     null,
+    isAppOwner: isAppOwner(),
     role:         getActiveEmail() ? ROLES.PLAYER : ROLES.GUEST,
-    tournament:   null
   };
 }
 
@@ -84,4 +71,11 @@ function resolveRoute(params) {
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function jsonForScript(obj) {
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
 }

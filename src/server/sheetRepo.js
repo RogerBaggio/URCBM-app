@@ -17,20 +17,21 @@ function rowToMaster(row) {
     id:          row[0],
     name:        row[1],
     game:        row[2],
-    state:       row[3],
-    tabName:     row[4],
-    inviteToken: row[5],
-    ownerEmail:  row[6],
-    created:     toIsoString(row[7]),
-    closed:      toIsoString(row[8]),
-    generated:   toIsoString(row[9]),
-    completed:   toIsoString(row[10])
+    date:        toIsoString(row[3]),
+    state:       row[4],
+    tabName:     row[5],
+    inviteToken: row[6],
+    ownerEmail:  row[7],
+    created:     toIsoString(row[8]),
+    closed:      toIsoString(row[9]),
+    generated:   toIsoString(row[10]),
+    completed:   toIsoString(row[11])
   };
 }
 
 function masterToRow(t) {
   return [
-    t.id, t.name, t.game, t.state, t.tabName, t.inviteToken,
+    t.id, t.name, t.game, t.date, t.state, t.tabName, t.inviteToken,
     t.ownerEmail, t.created, t.closed, t.generated, t.completed
   ];
 }
@@ -96,10 +97,10 @@ function createTournamentTab(tabName) {
   const sheet = ss.insertSheet(tabName);
 
   // Metadata block
-  sheet.getRange(LAYOUT.META_VALUES_ROW_1, 1, 1, 4)
-       .setValues([['Name', 'Game', 'State', 'Invite Token']]);
-  sheet.getRange(LAYOUT.META_VALUES_ROW_2, 1, 1, 4)
-       .setValues([['Created', 'Closed', 'Generated', 'Completed']]);
+  sheet.getRange(LAYOUT.META_VALUES_ROW_1, 1, 1, 5)
+       .setValues([['Name', 'Game', 'Date', 'State', 'Invite Token']]);
+  sheet.getRange(LAYOUT.META_VALUES_ROW_2, 1, 1, 3)
+       .setValues([['Created', 'Generated', 'Completed']]);
 
   // Participant headers
   sheet.getRange(LAYOUT.PARTICIPANTS_HEADER, 1, 1, PARTICIPANT_HEADERS.length)
@@ -121,10 +122,10 @@ function getTournamentSheet(tabName) {
 
 function writeTournamentMeta(t) {
   const sheet = getTournamentSheet(t.tabName);
-  sheet.getRange(LAYOUT.META_VALUES_ROW_1, 1, 1, 4)
-       .setValues([[t.name, t.game, t.state, t.inviteToken]]);
-  sheet.getRange(LAYOUT.META_VALUES_ROW_2, 1, 1, 4)
-       .setValues([[t.created, t.closed, t.generated, t.completed]]);
+  sheet.getRange(LAYOUT.META_VALUES_ROW_1, 1, 1, 5)
+       .setValues([[t.name, t.game, t.date, t.state, t.inviteToken]]);
+  sheet.getRange(LAYOUT.META_VALUES_ROW_2, 1, 1, 3)
+       .setValues([[t.created, t.generated, t.completed]]);
 }
 
 /* =========================================================

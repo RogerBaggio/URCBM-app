@@ -20,10 +20,6 @@ function apiCreateTournament(input) {
   return createTournament(input);
 }
 
-function apiCloseRegistration(id) {
-  return closeRegistration(id);
-}
-
 function apiRegisterPlayer(input) {
   return registerPlayer(input);
 }
@@ -58,4 +54,48 @@ function apiUndoMatchResult(id, matchIndex) {
 
 function apiGetSnapshot(id) {
   return getTournamentSnapshot(id);
+}
+
+function apiUpdateTournament(id, input) { 
+  return updateTournament(id, input); 
+}
+
+function apiCompleteTournament(id) {
+  return completeTournament(id);
+}
+
+function apiCancelTournament(id) {
+  return cancelTournament(id);
+}
+
+function apiArchiveTournament(id) {
+  return archiveTournament(id);
+}
+
+function apiGenerateInviteToken(id) {
+  return generateInviteToken(id);
+}
+
+function apiRevokeInviteToken(id) {
+  return revokeInviteToken(id);
+}
+
+function apiRevokeManager(id, email) {
+  return revokeManager(id, email);
+}
+
+function apiPickWinner(id, mi, winner) {
+  return pickWinner(id, mi, winner);
+}
+
+function apiSetMatchScores(id, mi, a, b) {
+  return setMatchScores(id, mi, a, b);
+}
+
+function apiClearWinner(id, mi) {
+  return clearWinner(id, mi);
+}
+
+function apiGetHub() {
+  return getHub();
 }

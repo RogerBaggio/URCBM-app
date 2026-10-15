@@ -1,7 +1,6 @@
 // Tournament lifecycle states
 const TOURNAMENT_STATES = {
   REGISTRATION_OPEN:   'RegistrationOpen',
-  REGISTRATION_CLOSED: 'RegistrationClosed',
   BRACKET_GENERATED:   'BracketGenerated',
   COMPLETED:           'Completed',
   CANCELLED:           'Cancelled'
@@ -33,7 +32,7 @@ const SHEETS = {
 
 // Master tab headers (order matters — index +1 = column number)
 const MASTER_HEADERS = [
-  'ID', 'Tournament Name', 'Game', 'State', 'Tab Name',
+  'ID', 'Tournament Name', 'Game', 'Date', 'State', 'Tab Name',
   'Invite Token', 'Owner Email', 'Created', 'Closed', 'Generated', 'Completed'
 ];
 
@@ -72,7 +71,6 @@ const PROP_KEYS = {
 const INVITE_DECISIONS = {
   REGISTER:            'register',
   ALREADY_REGISTERED:  'already-registered',
-  REGISTRATION_CLOSED: 'registration-closed',
   WATCH:               'watch',
   CANCELLED:           'cancelled',
   INVALID:             'invalid'

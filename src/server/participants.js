@@ -3,13 +3,17 @@
  * =======================================================*/
 
 function registerPlayer(input) {
-  const email = assertAuthenticated();
-  const token = String(input && input.inviteToken || '').trim();
+  const email   = assertAuthenticated();
   const rawName = String(input && input.displayName || '');
+  const id      = String(input && input.tournamentId || '').trim();
+  const token   = String(input && input.inviteToken || '').trim();
 
-  // 1) Token must resolve to a tournament in RegistrationOpen
-  const t = findTournamentByInviteToken(token);
-  if (!t) throw new Error('INVALID_TOKEN');
+  let t = null;
+  if (id) t = findTournamentById(id);
+  else if (token) t = findTournamentByInviteToken(token);
+
+  // 1) Id or Token must resolve to a tournament in RegistrationOpen
+  if (!t) throw new Error('INVALID_TOURNAMENT');
   if (t.state !== TOURNAMENT_STATES.REGISTRATION_OPEN) {
     throw new Error('REGISTRATION_CLOSED');
   }
@@ -38,7 +42,7 @@ function registerPlayer(input) {
   // 5) Build participant row
   const participant = {
     email:       email,
-    googleName:  email.split('@')[0],  // see note below
+    googleName:  email.split('@')[0],
     displayName: result.value,
     role:        PARTICIPANT_ROLES.PLAYER,
     joinedAt:    nowIso()
@@ -73,7 +77,7 @@ function removePlayer(tournamentId, targetEmail) {
 }
 
 /* =========================================================
- * Promote to manager (owner only, after close)
+ * Promote/Revoke manager (owner only)
  * =======================================================*/
 
 function promoteToManager(tournamentId, targetEmail) {
@@ -82,7 +86,6 @@ function promoteToManager(tournamentId, targetEmail) {
 
   const allowed = [
     TOURNAMENT_STATES.REGISTRATION_OPEN,
-    TOURNAMENT_STATES.REGISTRATION_CLOSED,
     TOURNAMENT_STATES.BRACKET_GENERATED
   ];
   if (allowed.indexOf(t.state) === -1) throw new Error('INVALID_STATE');
@@ -99,6 +102,30 @@ function promoteToManager(tournamentId, targetEmail) {
   });
   if (!found) throw new Error('NOT_FOUND');
 
+  writeParticipants(t, next);
+  return true;
+}
+
+function revokeManager(tournamentId, targetEmail) {
+  assertOwner(tournamentId);
+  const t = requireTournament(tournamentId);
+  const allowed = [
+    TOURNAMENT_STATES.REGISTRATION_OPEN,
+    TOURNAMENT_STATES.BRACKET_GENERATED
+  ];
+  if (allowed.indexOf(t.state) === -1) throw new Error('INVALID_STATE');
+
+  const target = String(targetEmail || '').toLowerCase();
+  const list = readParticipants(t.tabName);
+  let found = false;
+  const next = list.map(p => {
+    if (p.email === target) {
+      found = true;
+      return Object.assign({}, p, { role: PARTICIPANT_ROLES.PLAYER });
+    }
+    return p;
+  });
+  if (!found) throw new Error('NOT_FOUND');
   writeParticipants(t, next);
   return true;
 }

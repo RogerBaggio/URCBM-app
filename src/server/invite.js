@@ -4,8 +4,6 @@
  * Rules:
  *   RegistrationOpen | not registered     → register
  *   RegistrationOpen | registered         → already-registered
- *   RegistrationClosed (no bracket) | reg → already-registered
- *   RegistrationClosed (no bracket) | !reg→ registration-closed
  *   BracketGenerated/Completed (any)      → watch
  *   Cancelled                             → cancelled
  *   Unknown token / revoked               → invalid
@@ -34,6 +32,10 @@ function validateInviteToken(token) {
   const t = findTournamentByInviteToken(clean);
   if (!t) return empty;
 
+  return buildInviteResult(t);
+}
+
+function buildInviteResult(t) {
   const ctx  = getCurrentUserContext(t.id);
   const role = ctx.role;
 
@@ -55,10 +57,6 @@ function validateInviteToken(token) {
     decision = isRegistered
       ? INVITE_DECISIONS.ALREADY_REGISTERED
       : INVITE_DECISIONS.REGISTER;
-  } else if (t.state === TOURNAMENT_STATES.REGISTRATION_CLOSED) {
-    decision = isRegistered
-      ? INVITE_DECISIONS.ALREADY_REGISTERED
-      : INVITE_DECISIONS.REGISTRATION_CLOSED;
   } else {
     decision = INVITE_DECISIONS.INVALID;
   }

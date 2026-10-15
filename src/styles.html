@@ -112,4 +112,83 @@
     border-radius: 4px;
     font-size: 0.9em;
   }
+
+  .hub-actions { margin: 0 0 16px; }
+  .hub-section { margin-bottom: 24px; }
+  .hub-section h2 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin: 0 0 8px;
+  }
+
+  .tournament-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  
+  .tournament-row {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .tournament-row:last-child { border-bottom: 0; }
+  .tournament-row a { font-weight: 600; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .btn-primary:hover { background: var(--accent-2); }
+
+  dialog.modal {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    min-width: 280px;
+    max-width: 400px;
+  }
+  
+  dialog.modal::backdrop { background: rgba(0,0,0,0.5); }
+  dialog.modal h3 { margin-top: 0; }
+  dialog.modal label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+  }
+  dialog.modal input {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+  }
+  
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  
+  .form-error {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin: 4px 0;
+  }
 </style>

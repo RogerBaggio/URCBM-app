@@ -1,4 +1,29 @@
 /* =========================================================
+ * App-owner helpers
+ * =======================================================*/
+
+function getEffectiveEmail() {
+  try {
+    if (typeof Session === 'undefined') return '';
+    const email = Session.getEffectiveUser().getEmail();
+    return email ? email.toLowerCase() : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function isAppOwner() {
+  const active = getActiveEmail();
+  const effective = getEffectiveEmail();
+  return !!active && !!effective && active === effective;
+}
+
+function assertAppOwner() {
+  if (!isAppOwner()) throw new Error('FORBIDDEN');
+  return getActiveEmail();
+}
+
+/* =========================================================
  * Identity
  * =======================================================*/
 

@@ -14,12 +14,11 @@
         case 'tournament':
           if (pages.Tournament) return pages.Tournament.render(boot);
           break;
-        case 'not-found':
-          return global.H.setMain(
-            '<div class="card"><h2>Not found</h2>' +
-            '<p class="muted">That tournament does not exist or was removed.</p>' +
-            '<p><a href="?">← Back to hub</a></p></div>'
-          );
+        case 'error':
+          if (pages.Error) return pages.Error.render(boot);
+          break;
+        case 'not-found': // legacy safety
+          return global.H.setMain(global.H.errorBlock('Not found.'));;
         default:
           if (pages.Hub) return pages.Hub.render(boot);
       }
