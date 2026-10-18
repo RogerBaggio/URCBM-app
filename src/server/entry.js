@@ -12,6 +12,7 @@ function doGet(e) {
   const template = HtmlService.createTemplateFromFile('index');
   template.bootstrap = jsonForScript(route);
   template.include   = include;
+  template.appUrl    = route.appUrl || '';
 
   return template
     .evaluate()

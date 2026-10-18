@@ -112,23 +112,61 @@
 
   /* ---------------------------------------------------------
   * Navigation helper for Apps Script IFRAME mode
-  * Uses a hidden anchor + click to leverage
-  * allow-top-navigation-by-user-activation.
+  * Always builds URLs from the deployed web app URL.
   * -------------------------------------------------------*/
-  function navigateTop(url) {
-    var target = url || window.location.href;
+  function navigateTop(path) {
+    var bootstrap = global.BOOTSTRAP || {};
+    var base = String(bootstrap.appUrl || '').replace(/\/+$/, '');
+
+    if (!base) {
+      console.error(
+        'BOOTSTRAP.appUrl is missing; cannot navigate to the web app.'
+      );
+
+      if (global.H && typeof global.H.setStatus === 'function') {
+        global.H.setStatus(
+          'Navigation failed: app URL unavailable. Reload the app.'
+        );
+      }
+
+      return false;
+    }
+
+    var suffix = String(path || '?');
+
+    if (suffix.charAt(0) !== '?' && suffix.charAt(0) !== '#') {
+      suffix = '?' + suffix;
+    }
+
     var link = document.createElement('a');
-    link.href = target;
+    link.href = base + suffix;
     link.target = '_top';
+    link.rel = 'noopener';
     link.style.display = 'none';
+
     document.body.appendChild(link);
     link.click();
-    // Clean up after the navigation is triggered
-    setTimeout(function () { document.body.removeChild(link); }, 100);
+
+    window.setTimeout(function () {
+      if (link.parentNode) {
+        link.parentNode.removeChild(link);
+      }
+    }, 100);
+
+    return true;
   }
 
   function reloadTop() {
-    navigateTop(window.location.href);
+    var bootstrap = global.BOOTSTRAP || {};
+    var path = '?';
+
+    if (bootstrap.inviteToken) {
+      path = '?invite=' + encodeURIComponent(bootstrap.inviteToken);
+    } else if (bootstrap.tournamentId) {
+      path = '?t=' + encodeURIComponent(bootstrap.tournamentId);
+    }
+
+    return navigateTop(path);
   }
 
   global.H = {
