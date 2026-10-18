@@ -44,14 +44,6 @@ function apiGetMatches(id) {
   return getMatches(id);
 }
 
-function apiUpdateMatchResult(id, matchIndex, scoreA, scoreB) {
-  return updateMatchResult(id, matchIndex, scoreA, scoreB);
-}
-
-function apiUndoMatchResult(id, matchIndex) {
-  return undoMatchResult(id, matchIndex);
-}
-
 function apiGetSnapshot(id) {
   return getTournamentSnapshot(id);
 }

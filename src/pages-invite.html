@@ -2,21 +2,544 @@
 (function (global) {
   'use strict';
 
-  function render(boot) {
-    var d = boot.decision || 'invalid';
-    var t = boot.tournament;
+  var boot  = window.BOOTSTRAP || {};
+  var state = {};
 
-    var html = '<div class="card">' +
-      '<h2>Invite</h2>' +
-      '<p class="muted">Decision: <code>' + global.H.escapeHtml(d) + '</code></p>';
+  /* =========================================================
+   * Dead-ends
+   * =======================================================*/
+  function showDead(msg, emoji) {
+    global.H.setMain(
+      '<div class="card error">' +
+        '<h2>' + (emoji || '😕') + ' Uh oh.</h2>' +
+        '<p>' + global.H.escapeHtml(msg) + '</p>' +
+        '<p class="back-to-hub"><a href="?">← Back to Hub</a></p>' +
+      '</div>'
+    );
+  }
 
-    if (t) {
-      html += '<p>Tournament: <strong>' + global.H.escapeHtml(t.name) + '</strong> ' +
-              '<span class="muted">(' + global.H.escapeHtml(t.state) + ')</span></p>';
+  /* =========================================================
+   * Render
+   * =======================================================*/
+  function render() {
+    attachDialogCloseHandler();
+    
+    var t          = boot.tournament;
+    var decision   = boot.decision;
+    var role       = boot.role || 'guest';
+    var isLoggedIn = !!boot.isLoggedIn;
+
+    // Redirect to the tournament page when brackets exist
+    if (decision === 'watch' && t && t.id) {
+      global.H.navigateTop('?t=' + encodeURIComponent(t.id));
+      return;
     }
-    html += '</div>';
+    if (decision === 'invalid')   return showDead('That invite link is invalid or has been revoked.', '🔒');
+    if (decision === 'cancelled') return showDead('This tournament was cancelled.', '🎈');
+    if (!t)                       return showDead('Tournament not found.', '❓');
+
+    state.t          = t;
+    state.role       = role;
+    state.isLoggedIn = isLoggedIn;
+
+    var html = '';
+    html += tournamentHeader(t);
+    html += messageCard(decision, isLoggedIn, role);
+    html += actionRow(decision, role);
+    if (role === 'owner') html += ownerTools();
+    html += '<p class="back-to-hub"><a href="?">← Back to Hub</a></p>';
+    html += dialogs();
 
     global.H.setMain(html);
+    global.H.setStatus('Ready');
+
+    wire(decision, role);
+  }
+
+  /* =========================================================
+   * Sections
+   * =======================================================*/
+  function tournamentHeader(t) {
+    return '<div class="card invite-header">' +
+      '<h2>' + global.H.escapeHtml(t.name) + '</h2>' +
+      '<p class="muted">' +
+        '🎮 ' + global.H.escapeHtml(t.game) +
+        (t.date ? ' &nbsp;·&nbsp; 📅 ' + global.H.escapeHtml(t.date) : '') +
+      '</p>' +
+      '<p class="badge">' + global.H.escapeHtml(t.state) + '</p>' +
+    '</div>';
+  }
+
+  function messageCard(decision, isLoggedIn, role) {
+    var msg;
+    if (decision === 'already-registered') {
+      if (role === 'owner')        msg = "👑 You're the host of this tournament.";
+      else if (role === 'manager') msg = "🛡️ You're a manager of this tournament.";
+      else                          msg = "🎉 You're already registered. Sit tight!";
+    } else if (decision === 'register') {
+      if (!isLoggedIn) {
+        msg = "🕵️ Who goes there? Log in with your Google account, refresh, and step into the arena.";
+      } else {
+        msg = "🥊 Ready to throw hands? Pick a nickname and hit the button below to enter.";
+      }
+    } else {
+      msg = "🤔 Nothing to do here.";
+    }
+    return '<div class="card invite-message">' +
+      '<p>' + global.H.escapeHtml(msg) + '</p>' +
+      '<div id="register-error" class="form-error" hidden></div>' +
+    '</div>';
+  }
+
+  function actionRow(decision, role) {
+    var buttons = [];
+
+    if (decision === 'register' && state.isLoggedIn) {
+      buttons.push(
+        '<label class="nickname-label">Nickname' +
+          '<input id="nickname" type="text" maxlength="24" placeholder="e.g. Rojudo">' +
+        '</label>'
+      );
+      buttons.push('<button id="register-btn" class="btn-primary">Register</button>');
+    } else if (decision === 'register' && !state.isLoggedIn) {
+      buttons.push(
+        '<a class="btn-primary" href="' + window.location.href + '" ' +
+        'onclick="return false;" disabled>Log in to register</a>'
+      );
+    }
+
+    // Owner-only share button appears whenever the tournament has a token
+    if (role === 'owner' && state.t.inviteToken) {
+      buttons.push('<button id="share-btn" class="btn-secondary">🔗 Share invitation</button>');
+    }
+
+    if (!buttons.length) return '';
+    return '<div class="invite-actions">' + buttons.join('') + '</div>';
+  }
+
+  function ownerTools() {
+    return '<div class="card owner-tools">' +
+      '<h3>Owner tools</h3>' +
+      '<div class="invite-actions">' +
+        '<button id="manage-players-btn" class="btn-secondary">Manage Players</button>' +
+        '<button id="manage-tournament-btn" class="btn-secondary">Manage Tournament</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* =========================================================
+   * Dialogs
+   * =======================================================*/
+  function dialogs() {
+    return '' +
+      // Manage players
+      '<dialog id="players-dialog" class="modal">' +
+        '<button type="button" class="modal-x" data-close-x aria-label="Close">×</button>' +
+        '<h3>Manage Players</h3>' +
+        '<p class="muted">Check a player to promote to Manager. Uncheck to demote.</p>' +
+        '<div id="players-list" class="players-list">Loading…</div>' +
+        '<p class="form-error" id="players-error" hidden></p>' +
+        '<div class="modal-actions">' +
+          '<button type="button" id="players-close">Close</button>' +
+        '</div>' +
+      '</dialog>' +
+
+      // Manage tournament
+      '<dialog id="tournament-dialog" class="modal">' +
+        '<button type="button" class="modal-x" data-close-x aria-label="Close">×</button>' +
+        '<h3>Manage Tournament</h3>' +
+        '<form id="tournament-form">' +
+          '<label>Name <input name="name" type="text" maxlength="80" required></label>' +
+          '<label>Game <input name="game" type="text" maxlength="80" required></label>' +
+          '<label>Date <input name="date" type="date"></label>' +
+          '<p class="form-error" id="tournament-error" hidden></p>' +
+          '<div class="modal-actions">' +
+            '<button type="button" id="tournament-close">Close</button>' +
+            '<button type="submit" class="btn-primary">Save</button>' +
+          '</div>' +
+        '</form>' +
+        '<hr class="modal-sep">' +
+        '<div class="modal-actions danger-actions">' +
+          '<button type="button" id="generate-btn" class="btn-primary">⚔️ Generate Brackets</button>' +
+          '<button type="button" id="cancel-tournament-btn" class="btn-danger">Cancel Tournament</button>' +
+        '</div>' +
+      '</dialog>' +
+
+      // Share
+      '<dialog id="share-dialog" class="modal">' +
+        '<button type="button" class="modal-x" data-close-x aria-label="Close">×</button>' + 
+        '<h3>Share invitation</h3>' +
+        '<p class="muted">Anyone with this link can register while registrations are open.</p>' +
+        '<input id="share-url" type="text" readonly>' +
+        '<div class="modal-actions">' +
+          '<button type="button" id="share-copy" class="btn-primary">Copy</button>' +
+          '<button type="button" id="share-close">Close</button>' +
+        '</div>' +
+      '</dialog>';
+  }
+
+  //Close dialogs when clicking the X button
+  function attachDialogCloseHandler() {
+    document.body.addEventListener('click', function (ev) {
+      var x = ev.target.closest('[data-close-x]');
+      if (x) {
+        var dlg = x.closest('dialog');
+        if (dlg) dlg.close();
+      }
+    });
+  }
+
+  /* =========================================================
+   * Wire
+   * =======================================================*/
+  function wire(decision, role) {
+    var registerBtn = document.getElementById('register-btn');
+    if (registerBtn) registerBtn.addEventListener('click', onRegister);
+
+    var shareBtn = document.getElementById('share-btn');
+    if (shareBtn) shareBtn.addEventListener('click', onShareClick);
+
+    var managePlayersBtn = document.getElementById('manage-players-btn');
+    if (managePlayersBtn) managePlayersBtn.addEventListener('click', openPlayersDialog);
+
+    var manageTournamentBtn = document.getElementById('manage-tournament-btn');
+    if (manageTournamentBtn) manageTournamentBtn.addEventListener('click', openTournamentDialog);
+    
+    var playersClose = document.getElementById('players-close');
+    if (playersClose) playersClose.addEventListener('click', function () {
+      document.getElementById('players-dialog').close();
+    });
+
+    var tournamentClose = document.getElementById('tournament-close');
+    if (tournamentClose) tournamentClose.addEventListener('click', function () {
+      document.getElementById('tournament-dialog').close();
+    });
+  }
+
+  /* =========================================================
+   * Register
+   * =======================================================*/
+  function onRegister() {
+    var err  = document.getElementById('register-error');
+    var btn  = document.getElementById('register-btn');
+    var name = document.getElementById('nickname').value;
+    err.hidden = true;
+
+    if (!name.trim()) {
+      err.textContent = 'Pick a nickname first.';
+      err.hidden = false;
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Registering…';
+
+    global.api.call('apiRegisterPlayer', {
+      tournamentId: state.t.id,
+      displayName:  name
+    }).then(function () {
+      global.H.setStatus('Registered! Refreshing…');
+      setTimeout(function () { global.H.reloadTop(); }, 800);
+    }).catch(function (e) {
+      err.textContent = friendlyError(e.message);
+      err.hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Register';
+    });
+  }
+
+  function friendlyError(code) {
+    var c = String(code || '').replace(/^Error:\s*/, '');
+    if (c.indexOf('INVALID_NAME:') === 0) return c.replace('INVALID_NAME: ', '');
+    if (c === 'ALREADY_REGISTERED')  return "You're already registered.";
+    if (c === 'REGISTRATION_CLOSED') return 'Registration closed.';
+    if (c === 'TOURNAMENT_FULL')     return 'This tournament is full.';
+    if (c === 'AUTH_REQUIRED')       return 'Please log in with Google and refresh.';
+    if (c === 'OWNER_CANNOT_REGISTER') return "Owners can't register as players.";
+    return 'Something went wrong: ' + c;
+  }
+
+  /* =========================================================
+   * Share
+   * =======================================================*/
+  function onShareClick() {
+    var base = (boot.appUrl || '').replace(/\/+$/, '');
+    if (!base) {
+      global.H.setStatus('Share link unavailable. Reload the page.');
+      return;
+    }
+    var url = base + '?invite=' + encodeURIComponent(state.t.inviteToken);
+
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join ' + state.t.name,
+        text:  'Register for ' + state.t.name + '!',
+        url:   url
+      }).catch(function () { /* cancelled */ });
+      return;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        global.H.setStatus('Invite link copied!');
+      }).catch(function () { showShareDialog(url); });
+      return;
+    }
+
+    showShareDialog(url);
+  }
+
+  function showShareDialog(url) {
+    var dlg = document.getElementById('share-dialog');
+    document.getElementById('share-url').value = url;
+    dlg.showModal();
+
+    document.getElementById('share-copy').onclick = function () {
+      var input = document.getElementById('share-url');
+      input.select();
+      try { document.execCommand('copy'); global.H.setStatus('Copied!'); }
+      catch (e) { /* user copies manually */ }
+    };
+    document.getElementById('share-close').onclick = function () { dlg.close(); };
+  }
+
+  /* =========================================================
+   * Players dialog
+   * =======================================================*/
+  function openPlayersDialog() {
+    var dlg  = document.getElementById('players-dialog');
+    var list = document.getElementById('players-list');
+    var err  = document.getElementById('players-error');
+    var applyBtn = document.getElementById('players-apply');
+
+    list.textContent = 'Loading…';
+    err.hidden = true;
+
+    // Ensure the Apply button exists in the dialog markup
+    if (!applyBtn) {
+      var actions = dlg.querySelector('.modal-actions');
+      applyBtn = document.createElement('button');
+      applyBtn.type = 'button';
+      applyBtn.id = 'players-apply';
+      applyBtn.className = 'btn-primary';
+      applyBtn.textContent = 'Apply Changes';
+      actions.insertBefore(applyBtn, actions.firstChild);
+    }
+
+    dlg.showModal();
+
+    // Local working copy
+    var original = [];
+    var working  = [];
+    var toRemove = {};
+
+    global.api.call('apiGetParticipants', state.t.id).then(function (players) {
+      original = players.slice();
+      working  = players.map(function (p) {
+        return { email: p.email || p.displayName, displayName: p.displayName,
+                 emailReal: p.email || '', role: p.role };
+      });
+      toRemove = {};
+      renderList();
+    }).catch(function (e) {
+      list.innerHTML = '';
+      err.textContent = e.message;
+      err.hidden = false;
+    });
+
+    function renderList() {
+      if (!working.length) {
+        list.innerHTML = '<p class="muted">No players registered yet.</p>';
+        applyBtn.disabled = true;
+        return;
+      }
+      var canRemove = (state.t.state === 'RegistrationOpen');
+      list.innerHTML = working.map(function (p, i) {
+        var checked = p.role === 'manager' ? ' checked' : '';
+        var removeBtn = canRemove
+          ? '<button type="button" class="player-remove" data-remove="' + i + '" ' +
+            'title="Remove player">✕</button>'
+          : '';
+        return '<div class="player-row">' +
+          '<label class="player-main">' +
+            '<input type="checkbox" data-promote="' + i + '"' + checked + '>' +
+            '<span class="player-name">' + global.H.escapeHtml(p.displayName) + '</span>' +
+            '<span class="muted player-email">' + global.H.escapeHtml(p.emailReal || '') + '</span>' +
+          '</label>' +
+          removeBtn +
+        '</div>';
+      }).join('');
+
+      list.querySelectorAll('[data-promote]').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          var i = parseInt(cb.getAttribute('data-promote'), 10);
+          working[i].role = cb.checked ? 'manager' : 'player';
+          markDirty();
+        });
+      });
+
+      list.querySelectorAll('[data-remove]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var i = parseInt(btn.getAttribute('data-remove'), 10);
+          var p = working[i];
+          global.H.confirmDialog({
+            title:        'Remove ' + p.displayName + '?',
+            message:      'This removes them from the tournament before brackets are generated.',
+            confirmLabel: 'Remove',
+            danger:       true
+          }).then(function () {
+            if (p.emailReal) toRemove[p.emailReal] = true;
+            working.splice(i, 1);
+            renderList();
+            markDirty();
+          }).catch(function () { /* cancelled */ });
+        });
+      });
+    }
+
+    function markDirty() {
+      applyBtn.disabled = !hasChanges();
+    }
+
+    function hasChanges() {
+      if (Object.keys(toRemove).length) return true;
+      for (var i = 0; i < working.length; i++) {
+        var orig = original.find(function (o) {
+          return (o.email || o.displayName) === (working[i].emailReal || working[i].displayName);
+        });
+        if (!orig) return true;
+        if (orig.role !== working[i].role) return true;
+      }
+      return false;
+    }
+
+    applyBtn.onclick = function () {
+      err.hidden = true;
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Applying…';
+
+      var steps = [];
+
+      // Removals first
+      Object.keys(toRemove).forEach(function (email) {
+        steps.push(function () { return global.api.call('apiRemovePlayer', state.t.id, email); });
+      });
+
+      // Then role changes
+      working.forEach(function (p) {
+        var orig = original.find(function (o) {
+          return (o.email || o.displayName) === (p.emailReal || p.displayName);
+        });
+        if (!orig) return;
+        if (orig.role !== p.role) {
+          var fn = p.role === 'manager' ? 'apiPromoteToManager' : 'apiRevokeManager';
+          steps.push(function () { return global.api.call(fn, state.t.id, p.emailReal); });
+        }
+      });
+
+      if (!steps.length) {
+        applyBtn.textContent = 'Apply Changes';
+        return;
+      }
+
+      // Sequential execution to avoid LockService contention
+      var chain = Promise.resolve();
+      steps.forEach(function (step) {
+        chain = chain.then(step);
+      });
+
+      chain.then(function () {
+        global.H.setStatus('Changes applied.');
+        dlg.close();
+        global.H.reloadTop();
+      }).catch(function (e) {
+        err.textContent = e.message;
+        err.hidden = false;
+        applyBtn.disabled = false;
+        applyBtn.textContent = 'Apply Changes';
+      });
+    };
+  }
+
+  /* =========================================================
+   * Tournament dialog
+   * =======================================================*/
+  function openTournamentDialog() {
+    var dlg  = document.getElementById('tournament-dialog');
+    var form = document.getElementById('tournament-form');
+    var err  = document.getElementById('tournament-error');
+
+    form.elements.name.value = state.t.name || '';
+    form.elements.game.value = state.t.game || '';
+    form.elements.date.value = global.H.normalizeDateForInput(state.t.date || '');
+    err.hidden = true;
+
+    dlg.showModal();
+
+    form.onsubmit = function (ev) {
+      ev.preventDefault();
+      err.hidden = true;
+      global.api.call('apiUpdateTournament', state.t.id, {
+        name: form.elements.name.value,
+        game: form.elements.game.value,
+        date: form.elements.date.value
+      }).then(function () {
+        dlg.close();
+        global.H.reloadTop();
+      }).catch(function (e) {
+        err.textContent = e.message;
+        err.hidden = false;
+      });
+    };
+
+    document.getElementById('tournament-close').onclick = function () { dlg.close(); };
+
+    document.getElementById('generate-btn').onclick = function () {
+      global.H.confirmDialog({
+        title:        'Generate Brackets?',
+        message:      'This closes registrations and cannot be undone. Really generate the brackets now?',
+        confirmLabel: 'Yes, generate',
+        danger:       false
+      }).then(function () {
+        return global.api.call('apiGenerateBracket', state.t.id);
+      }).then(function () {
+        global.H.navigateTop('?t=' + encodeURIComponent(state.t.id));
+      }).catch(function (e) {
+        if (e && e.message === 'cancelled') return;
+        err.textContent = friendlyGenerateError(e.message);
+        err.hidden = false;
+      });
+    };
+
+    document.getElementById('cancel-tournament-btn').onclick = function () {
+      global.H.confirmDialog({
+        title:        'Cancel Tournament?',
+        message:      'Players will no longer see it. This cannot be reverted.',
+        confirmLabel: 'Cancel Tournament',
+        danger:       true
+      }).then(function () {
+        return global.api.call('apiCancelTournament', state.t.id);
+      }).then(function () {
+        global.H.navigateTop('?');
+      }).catch(function (e) {
+        if (e && e.message === 'cancelled') return;
+        err.textContent = e.message;
+        err.hidden = false;
+      });
+    };
+  }
+
+  function friendlyGenerateError(code) {
+    var c = String(code || '').replace(/^Error:\s*/, '');
+    if (c === 'MIN_PLAYERS_REQUIRED')
+      return 'At least 3 players are needed to generate brackets. Consider inviting more people or canceling this tournament.';
+    if (c === 'INVALID_STATE')
+      return 'This tournament is no longer open for generation.';
+    if (c === 'TOO_FEW_PLAYERS')
+      return 'Too few players.';
+    if (c === 'TOO_MANY_PLAYERS')
+      return 'Too many players (max 32).';
+    return c;
   }
 
   global.Pages = global.Pages || {};

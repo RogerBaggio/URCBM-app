@@ -31,7 +31,7 @@ function rowToMaster(row) {
 function masterToRow(t) {
   return [
     t.id, t.name, t.game, t.date, t.state, t.tabName, t.inviteToken,
-    t.ownerEmail, t.created, t.closed, t.generated, t.completed
+    t.ownerEmail, t.created, t.generated, t.completed
   ];
 }
 

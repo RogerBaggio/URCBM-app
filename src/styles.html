@@ -191,4 +191,164 @@
     font-size: 0.85rem;
     margin: 4px 0;
   }
+
+  /* --- Invite page ------------------------------------------ */
+.invite-header h2 { margin-bottom: 4px; }
+
+.badge {
+  display: inline-block;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.invite-message { font-size: 1rem; }
+
+.invite-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: var(--border); }
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.owner-tools h3 { margin: 0 0 10px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+
+.nickname-label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  flex: 1 1 200px;
+}
+.nickname-label input {
+  margin-top: 4px;
+  padding: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+}
+
+.back-to-hub { margin-top: 24px; }
+
+/* --- Dialogs --------------------------------------------- */
+dialog.modal hr.modal-sep {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+.danger-actions { justify-content: space-between; }
+.danger-actions .btn-primary { flex: 0 0 auto; }
+
+.players-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  background: var(--surface-2);
+}
+.player-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.player-row:hover { background: var(--surface); }
+.player-name { font-weight: 600; }
+.player-email { font-size: 0.75rem; }
+
+dialog.modal input[readonly] {
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+
+.invite-actions a.btn-primary[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* --- Modal close button (red X, top-right) --------------- */
+dialog.modal { position: relative; }
+
+.modal-x {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  border: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.modal-x:hover { filter: brightness(1.1); }
+
+/* --- Confirm dialog -------------------------------------- */
+.confirm-modal h3 { padding-right: 28px; }
+.confirm-modal p  { color: var(--text-dim); }
+
+/* --- Players dialog -------------------------------------- */
+.player-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 4px;
+}
+.player-main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.player-remove {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.player-remove:hover { background: var(--danger); color: #fff; }
 </style>

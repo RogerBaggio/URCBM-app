@@ -44,6 +44,93 @@
     } catch (e) { return String(iso); }
   }
 
+  /* ---------------------------------------------------------
+  * Confirmation dialog (replaces window.confirm)
+  * Usage:
+  *   H.confirm({ title, message, confirmLabel, danger })
+  *     .then(() => { ... })
+  *     .catch(() => {  cancelled  });
+  * -------------------------------------------------------*/
+  function confirmDialog(opts) {
+    opts = opts || {};
+    return new Promise(function (resolve, reject) {
+      var id = 'confirm-' + Date.now();
+      var html =
+        '<dialog id="' + id + '" class="modal confirm-modal">' +
+          '<button type="button" class="modal-x" data-x aria-label="Cancel">×</button>' +
+          '<h3>' + escapeHtml(opts.title || 'Are you sure?') + '</h3>' +
+          '<p>' + escapeHtml(opts.message || '') + '</p>' +
+          '<div class="modal-actions">' +
+            '<button type="button" data-no>' + escapeHtml(opts.cancelLabel || 'Cancel') + '</button>' +
+            '<button type="button" data-yes class="' +
+              (opts.danger ? 'btn-danger' : 'btn-primary') + '">' +
+              escapeHtml(opts.confirmLabel || 'Confirm') +
+            '</button>' +
+          '</div>' +
+        '</dialog>';
+      var wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      document.body.appendChild(wrap);
+      var dlg = wrap.firstChild;
+
+      function close(ok) {
+        dlg.close();
+        wrap.remove();
+        if (ok) resolve(true);
+        else reject(new Error('cancelled'));
+      }
+
+      dlg.querySelector('[data-yes]').addEventListener('click', function () { close(true); });
+      dlg.querySelector('[data-no]').addEventListener('click', function () { close(false); });
+      dlg.querySelector('[data-x]').addEventListener('click', function () { close(false); });
+      dlg.addEventListener('cancel', function (e) { e.preventDefault(); close(false); });
+
+      dlg.showModal();
+    });
+  }
+
+  /* ---------------------------------------------------------
+  * Date helpers
+  * -------------------------------------------------------*/
+  function normalizeDateForInput(value) {
+    if (!value) return '';
+    var s = String(value).trim();
+    // Already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // ISO string → slice the date part
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+    // Try Date parsing as a last resort
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    }
+    return '';
+  }
+
+  /* ---------------------------------------------------------
+  * Navigation helper for Apps Script IFRAME mode
+  * Uses a hidden anchor + click to leverage
+  * allow-top-navigation-by-user-activation.
+  * -------------------------------------------------------*/
+  function navigateTop(url) {
+    var target = url || window.location.href;
+    var link = document.createElement('a');
+    link.href = target;
+    link.target = '_top';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    // Clean up after the navigation is triggered
+    setTimeout(function () { document.body.removeChild(link); }, 100);
+  }
+
+  function reloadTop() {
+    navigateTop(window.location.href);
+  }
+
   global.H = {
     escapeHtml: escapeHtml,
     qs: qs,
@@ -51,7 +138,11 @@
     setStatus: setStatus,
     spinner: spinner,
     errorBlock: errorBlock,
-    formatDate: formatDate
+    formatDate: formatDate,
+    confirmDialog: confirmDialog,
+    navigateTop: navigateTop,
+    reloadTop: reloadTop,
+    normalizeDateForInput: normalizeDateForInput
   };
 })(window);
 </script>

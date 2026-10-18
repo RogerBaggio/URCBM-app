@@ -6,9 +6,12 @@ function doGet(e) {
   const params = (e && e.parameter) || {};
   const route  = resolveRoute(params);
 
+  // Capture the real /exec URL while we're in an HTTP context
+  route.appUrl = registerAndGetAppUrl();
+
   const template = HtmlService.createTemplateFromFile('index');
   template.bootstrap = jsonForScript(route);
-  template.include   = include; // helper for client partials
+  template.include   = include;
 
   return template
     .evaluate()
@@ -18,6 +21,7 @@ function doGet(e) {
 }
 
 /**
+ * 
  * Resolves the page the user should see based on URL params.
  * Returns a plain object that the client reads from `bootstrap`.
  *
@@ -38,6 +42,7 @@ function resolveRoute(params) {
       inviteToken:  inviteToken,
       decision:     result.decision,
       role:         result.role,
+      isLoggedIn:   !!getActiveEmail(),
       tournament:   result.tournament
     };
   }

@@ -2,3 +2,5 @@
 node_modules/
 .DS_Store
 .vscode/
+gerador_contexto_ia.py
+contexto_projeto_*.md
