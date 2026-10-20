@@ -276,6 +276,8 @@
     if (c === 'REGISTRATION_CLOSED') return 'Registration closed.';
     if (c === 'TOURNAMENT_FULL')     return 'This tournament is full.';
     if (c === 'AUTH_REQUIRED')       return 'Please log in and refresh.';
+    if (c === 'NOT_FOUND')           return 'A player could not be found. Refresh and try again.';
+    if (c === 'INVALID_STATE')       return 'This tournament no longer accepts this action.';
     return 'Something went wrong: ' + c;
   }
 
@@ -412,7 +414,7 @@
             confirmLabel: 'Remove',
             danger:       true
           }).then(function () {
-            if (p.emailReal) toRemove[p.emailReal] = true;
+            if (p.userId) toRemove[p.userId] = true;
             working.splice(i, 1);
             renderList();
             markDirty();
@@ -428,9 +430,7 @@
     function hasChanges() {
       if (Object.keys(toRemove).length) return true;
       for (var i = 0; i < working.length; i++) {
-        var orig = original.find(function (o) {
-          return (o.email || o.displayName) === (working[i].emailReal || working[i].displayName);
-        });
+        var orig = original.find(function (o) { return o.userId === working[i].userId; });
         if (!orig) return true;
         if (orig.role !== working[i].role) return true;
       }
@@ -442,43 +442,41 @@
       applyBtn.disabled = true;
       applyBtn.textContent = 'Applying…';
 
-      var steps = [];
+      var changes = [];
 
-      // Removals first
       Object.keys(toRemove).forEach(function (userId) {
-        steps.push(function () { return global.api.call('apiRemovePlayer', state.t.id, userId); });
+        changes.push({ action: 'remove', userId: userId });
       });
 
       working.forEach(function (p) {
         var orig = original.find(function (o) { return o.userId === p.userId; });
         if (!orig) return;
         if (orig.role !== p.role) {
-          var fn = p.role === 'manager' ? 'apiPromoteToManager' : 'apiRevokeManager';
-          steps.push(function () { return global.api.call(fn, state.t.id, p.userId); });
+          changes.push({
+            action: p.role === 'manager' ? 'promote' : 'demote',
+            userId: p.userId
+          });
         }
       });
 
-      if (!steps.length) {
+      if (!changes.length) {
         applyBtn.textContent = 'Apply Changes';
+        applyBtn.disabled = false;
         return;
       }
 
-      // Sequential execution to avoid LockService contention
-      var chain = Promise.resolve();
-      steps.forEach(function (step) {
-        chain = chain.then(step);
-      });
-
-      chain.then(function () {
-        global.H.setStatus('Changes applied.');
-        dlg.close();
-        global.H.reloadTop();
-      }).catch(function (e) {
-        err.textContent = e.message;
-        err.hidden = false;
-        applyBtn.disabled = false;
-        applyBtn.textContent = 'Apply Changes';
-      });
+      global.api.call('apiApplyParticipantChanges', state.t.id, changes)
+        .then(function () {
+          global.H.setStatus('Changes applied.');
+          dlg.close();
+          global.H.reloadTop();
+        })
+        .catch(function (e) {
+          err.textContent = friendlyError(e.message);
+          err.hidden = false;
+          applyBtn.disabled = false;
+          applyBtn.textContent = 'Apply Changes';
+        });
     };
   }
 

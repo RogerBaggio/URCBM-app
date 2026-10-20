@@ -3,16 +3,43 @@
   'use strict';
 
   function render(boot) {
-    var t = boot.tournament || {};
+    var id = boot && boot.tournamentId;
+    if (!id) {
+      global.H.setMain(global.H.errorBlock('Missing tournament ID.'));
+      return;
+    }
+
+    global.H.setMain(global.H.spinner('Loading tournament…'));
+    global.H.setStatus('Loading');
+
+    global.api.call('apiGetSnapshot', id).then(function (snap) {
+      draw(snap);
+    }).catch(function (err) {
+      global.H.setMain(global.H.errorBlock('Could not load tournament: ' + err.message));
+    });
+  }
+
+  function draw(snap) {
+    if (!snap || !snap.tournament) {
+      global.H.setMain(global.H.errorBlock('Tournament not found.'));
+      return;
+    }
+
+    var t    = snap.tournament;
+    var role = snap.role || 'guest';
+
     global.H.setMain(
       '<div class="card">' +
         '<h2>' + global.H.escapeHtml(t.name || 'Tournament') + '</h2>' +
         '<p class="muted">Game: ' + global.H.escapeHtml(t.game || '') + '</p>' +
         '<p class="muted">State: ' + global.H.escapeHtml(t.state || '') + '</p>' +
-        '<p class="muted">Your role: ' + global.H.escapeHtml(boot.role || 'guest') + '</p>' +
+        '<p class="muted">Your role: ' + global.H.escapeHtml(role) + '</p>' +
+        '<p class="muted">Participants: ' + (snap.participants ? snap.participants.length : 0) +
+          ' · Matches: ' + (snap.matches ? snap.matches.length : 0) + '</p>' +
         '<p><a href="?">← Back to hub</a></p>' +
       '</div>'
     );
+    global.H.setStatus('Ready');
   }
 
   global.Pages = global.Pages || {};

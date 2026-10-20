@@ -39,10 +39,9 @@ function buildInviteResult_(t) {
   const ctx  = getCurrentUserContext_(t.id);
   const role = ctx.role;
 
-  const isRegistered =
-    role === ROLES.OWNER ||
-    role === ROLES.MANAGER ||
-    role === ROLES.PLAYER;
+  // Presence of a participant row is the true registration signal,
+  // including for owners who have registered themselves as players.
+  const isRegistered = ctx.participant !== null;
 
   const bracketReady =
     t.state === TOURNAMENT_STATES.BRACKET_GENERATED ||

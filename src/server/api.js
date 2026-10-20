@@ -64,6 +64,12 @@ function apiRevokeManager(id, targetUserId, sessionToken) {
   });
 }
 
+function apiApplyParticipantChanges(id, changes, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return applyParticipantChanges_(id, changes);
+  });
+}
+
 function apiGenerateBracket(id, sessionToken) {
   return withAuthSession_(sessionToken, function () {
     return generateBracket_(id);

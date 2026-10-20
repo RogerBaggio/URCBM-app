@@ -18,12 +18,13 @@
       case 'register': return renderRegister(redirect);
       case 'verify':   return renderVerify(token);
       case 'reset':    return renderReset(token);
+      case 'forgot':   return renderForgot();
       default:         return renderLogin(redirect);
     }
   }
 
   /* =========================================================
-   * Shared bits
+   * URLs and shared bits
    * =======================================================*/
 
   function loginUrl(redirect) {
@@ -33,7 +34,7 @@
     return '?auth=register&redirect=' + encodeURIComponent(redirect || '?');
   }
   function forgotUrl() {
-    return '?auth=login&mode=forgot';
+    return '?auth=forgot';
   }
 
   function card(inner) {
@@ -84,27 +85,11 @@
         ' &nbsp;·&nbsp; ' +
         'Forgot password? <a href="' + forgotUrl() + '">Reset</a>' +
       '</p>' +
-      '<div id="forgot-panel" hidden>' +
-        '<hr class="modal-sep">' +
-        '<p class="muted">Enter your email and we will send a reset link if the account exists.</p>' +
-        '<form id="forgot-form">' +
-          '<label>Email <input name="email" type="email" required></label>' +
-          errBlock('forgot-error') +
-          '<p class="muted" id="forgot-success" hidden></p>' +
-          '<div class="modal-actions">' +
-            '<button type="submit" class="btn-secondary">Send reset link</button>' +
-          '</div>' +
-        '</form>' +
-      '</div>' +
       '<p class="back-to-hub"><a href="?">← Back to Hub</a></p>'
     );
 
     global.H.setMain(html);
     global.H.setStatus('Log in');
-
-    if (new URLSearchParams(global.location.search).get('mode') === 'forgot') {
-      document.getElementById('forgot-panel').hidden = false;
-    }
 
     document.getElementById('login-form').addEventListener('submit', function (ev) {
       ev.preventDefault();
@@ -140,20 +125,45 @@
           submit.textContent = 'Log in';
         });
     });
+  }
+
+  /* =========================================================
+   * Forgot password (request a reset email)
+   * =======================================================*/
+
+  function renderForgot() {
+    var html = card(
+      '<h2>Reset password</h2>' +
+      '<p class="muted">Enter your email and we will send a reset link if the account exists.</p>' +
+      '<form id="forgot-form">' +
+        '<label>Email <input name="email" type="email" autocomplete="username" required></label>' +
+        errBlock('forgot-error') +
+        '<p class="muted" id="forgot-success" hidden></p>' +
+        '<div class="modal-actions">' +
+          '<button type="submit" class="btn-primary">Send reset link</button>' +
+        '</div>' +
+      '</form>' +
+      '<p class="auth-links">Remembered it? <a href="' + loginUrl('?') + '">Back to log in</a></p>' +
+      '<p class="back-to-hub"><a href="?">← Back to Hub</a></p>'
+    );
+
+    global.H.setMain(html);
+    global.H.setStatus('Reset password');
 
     document.getElementById('forgot-form').addEventListener('submit', function (ev) {
       ev.preventDefault();
       var form = ev.target;
       var email = String(form.elements.email.value || '').trim();
       if (!email) return;
+
       var submit = form.querySelector('button[type="submit"]');
       submit.disabled = true;
       submit.textContent = 'Sending…';
 
       global.api.auth('authRequestPasswordReset', { email: email }).then(function () {
-        document.getElementById('forgot-success').hidden = false;
-        document.getElementById('forgot-success').textContent =
-          'If an eligible account exists, a reset email will be sent.';
+        var s = document.getElementById('forgot-success');
+        s.hidden = false;
+        s.textContent = 'If an eligible account exists, a reset email will be sent.';
         submit.disabled = false;
         submit.textContent = 'Send reset link';
       }).catch(function (err) {
@@ -243,7 +253,6 @@
       return;
     }
 
-    // Clean the token from the visible iframe URL without reloading.
     try {
       global.history.replaceState({}, '', '?auth=verify');
     } catch (e) { /* ignore */ }
@@ -272,7 +281,7 @@
   }
 
   /* =========================================================
-   * Reset password
+   * Reset password (consume token)
    * =======================================================*/
 
   function renderReset(token) {

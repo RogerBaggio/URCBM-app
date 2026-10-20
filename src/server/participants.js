@@ -59,35 +59,26 @@ function registerPlayer_(input) {
 }
 
 /* =========================================================
- * Remove (pre-bracket only, owner only)
+ * Batch mutation (used by the Manage Players dialog)
  * =======================================================*/
 
-function removePlayer_(tournamentId, targetUserId) {
+/**
+ * changes: [{ action: 'remove' | 'promote' | 'demote', userId: '...' },...]
+ * Rules:
+ *   - remove  → only in REGISTRATION_OPEN
+ *   - promote → REGISTRATION_OPEN or BRACKET_GENERATED
+ *   - demote  → REGISTRATION_OPEN or BRACKET_GENERATED
+ */
+function applyParticipantChanges_(tournamentId, changes) {
   assertOwner_(tournamentId);
   const t = requireTournament_(tournamentId);
 
-  if (t.state !== TOURNAMENT_STATES.REGISTRATION_OPEN) {
-    throw new Error('INVALID_STATE');
+  if (!Array.isArray(changes) || changes.length === 0) {
+    return { ok: true, noop: true };
   }
-
-  const target = String(targetUserId || '').trim();
-  if (!target) throw new Error('NOT_FOUND');
-
-  const list = readParticipants_(t.tabName);
-  const next = list.filter(p => p.userId !== target);
-  if (next.length === list.length) throw new Error('NOT_FOUND');
-
-  writeParticipants_(t, next);
-  return true;
-}
-
-/* =========================================================
- * Promote/Revoke manager (owner only)
- * =======================================================*/
-
-function promoteToManager_(tournamentId, targetUserId) {
-  assertOwner_(tournamentId);
-  const t = requireTournament_(tournamentId);
+  if (changes.length > 64) {
+    throw new Error('INVALID_CHANGES');
+  }
 
   const allowed = [
     TOURNAMENT_STATES.REGISTRATION_OPEN,
@@ -95,43 +86,78 @@ function promoteToManager_(tournamentId, targetUserId) {
   ];
   if (allowed.indexOf(t.state) === -1) throw new Error('INVALID_STATE');
 
-  const target = String(targetUserId || '').trim();
-  const list = readParticipants_(t.tabName);
-  let found = false;
-  const next = list.map(p => {
-    if (p.userId === target) {
-      found = true;
-      return Object.assign({}, p, { role: PARTICIPANT_ROLES.MANAGER });
-    }
-    return p;
+  const hasRemovals = changes.some(function (c) {
+    return c && c.action === 'remove';
   });
-  if (!found) throw new Error('NOT_FOUND');
+  if (hasRemovals && t.state !== TOURNAMENT_STATES.REGISTRATION_OPEN) {
+    throw new Error('INVALID_STATE');
+  }
 
-  writeParticipants_(t, next);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const list = readParticipants_(t.tabName);
+    const byId = {};
+    list.forEach(function (p) { byId[p.userId] = p; });
+
+    let next = list.slice();
+
+    changes.forEach(function (c) {
+      const action = String(c && c.action || '');
+      const userId = String(c && c.userId || '').trim();
+
+      if (!userId) throw new Error('INVALID_CHANGE');
+      if (!byId[userId]) throw new Error('NOT_FOUND');
+
+      if (action === 'remove') {
+        next = next.filter(function (p) { return p.userId !== userId; });
+      } else if (action === 'promote') {
+        next = next.map(function (p) {
+          return p.userId === userId
+            ? Object.assign({}, p, { role: PARTICIPANT_ROLES.MANAGER })
+            : p;
+        });
+      } else if (action === 'demote') {
+        next = next.map(function (p) {
+          return p.userId === userId
+            ? Object.assign({}, p, { role: PARTICIPANT_ROLES.PLAYER })
+            : p;
+        });
+      } else {
+        throw new Error('INVALID_ACTION');
+      }
+    });
+
+    writeParticipants_(t, next);
+    return { ok: true, count: next.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* =========================================================
+ * Single-action primitives (thin wrappers over the batch)
+ * =======================================================*/
+
+function removePlayer_(tournamentId, targetUserId) {
+  applyParticipantChanges_(tournamentId, [
+    { action: 'remove', userId: targetUserId }
+  ]);
+  return true;
+}
+
+function promoteToManager_(tournamentId, targetUserId) {
+  applyParticipantChanges_(tournamentId, [
+    { action: 'promote', userId: targetUserId }
+  ]);
   return true;
 }
 
 function revokeManager_(tournamentId, targetUserId) {
-  assertOwner_(tournamentId);
-  const t = requireTournament_(tournamentId);
-  const allowed = [
-    TOURNAMENT_STATES.REGISTRATION_OPEN,
-    TOURNAMENT_STATES.BRACKET_GENERATED
-  ];
-  if (allowed.indexOf(t.state) === -1) throw new Error('INVALID_STATE');
-
-  const target = String(targetUserId || '').trim();
-  const list = readParticipants_(t.tabName);
-  let found = false;
-  const next = list.map(p => {
-    if (p.userId === target) {
-      found = true;
-      return Object.assign({}, p, { role: PARTICIPANT_ROLES.PLAYER });
-    }
-    return p;
-  });
-  if (!found) throw new Error('NOT_FOUND');
-  writeParticipants_(t, next);
+  applyParticipantChanges_(tournamentId, [
+    { action: 'demote', userId: targetUserId }
+  ]);
   return true;
 }
 
