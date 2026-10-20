@@ -2,14 +2,82 @@
 (function (global) {
   'use strict';
 
-  /**
-   * api.call('apiGetSnapshot', id).then(function (snap) { ... });
-   * Rejects with Error whose message is the server-thrown code.
-   */
-  function call(fnName) {
-    var args = Array.prototype.slice.call(arguments, 1);
+  var STORAGE_KEY = 'urcbm_session_v1';
+  var current = null; // { token, expiresAt, user }
+
+  /* =========================================================
+   * Key storage
+   * =======================================================*/
+
+  function readStorage() {
+    try {
+      var raw = global.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !parsed.token) return null;
+      if (parsed.expiresAt) {
+        var expiry = Date.parse(parsed.expiresAt);
+        if (Number.isFinite(expiry) && expiry <= Date.now()) return null;
+      }
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeStorage(value) {
+    try {
+      if (value) global.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+      else       global.localStorage.removeItem(STORAGE_KEY);
+    } catch (e) { /* storage disabled / quota exceeded */ }
+  }
+
+  /* =========================================================
+   * Session state
+   * =======================================================*/
+
+  function getSessionToken() {
+    return current && current.token ? current.token : '';
+  }
+
+  function currentUser() {
+    return current && current.user ? current.user : null;
+  }
+
+  function notifyChanged() {
+    try {
+      global.dispatchEvent(new CustomEvent('urcbm:session-changed', {
+        detail: currentUser()
+      }));
+    } catch (e) { /* old browser */ }
+  }
+
+  function setSession(token, expiresAt, user) {
+    current = {
+      token: String(token || ''),
+      expiresAt: String(expiresAt || ''),
+      user: user || null
+    };
+    writeStorage(current);
+    notifyChanged();
+  }
+
+  function clearSession() {
+    current = null;
+    writeStorage(null);
+    notifyChanged();
+  }
+
+  /* =========================================================
+   * Transport
+   * =======================================================*/
+
+  function rawCall(fnName, args) {
     return new Promise(function (resolve, reject) {
-      var runner = google.script.run
+      if (!global.google || !global.google.script || !global.google.script.run) {
+        return reject(new Error('RUNTIME_UNAVAILABLE'));
+      }
+      var runner = global.google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(function (err) {
           var msg = (err && err.message) ? err.message : String(err);
@@ -22,6 +90,90 @@
     });
   }
 
-  global.api = { call: call };
+  function isAuthRequired(err) {
+    var msg = err && err.message ? String(err.message) : '';
+    return msg === 'AUTH_REQUIRED' || msg.indexOf('AUTH_REQUIRED:') === 0;
+  }
+
+  /**
+   * api.call(fnName, ...args)
+   * Appends the current session token to the server call. If
+   * rejects with AUTH_REQUIRED and token sent, clears
+   * session and retries anonymously (safe for read
+   * wrappers — write wrappers will just fail again).
+   */
+  function call(fnName) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (!/^api[A-Z]/.test(fnName)) {
+      return Promise.reject(new Error('NOT_API_FUNCTION: ' + fnName));
+    }
+
+    var token = getSessionToken();
+    var fullArgs = args.concat([token]);
+
+    return rawCall(fnName, fullArgs).catch(function (err) {
+      if (isAuthRequired(err) && token) {
+        clearSession();
+        return rawCall(fnName, args.concat(['']));
+      }
+      throw err;
+    });
+  }
+
+  /**
+   * api.auth(fnName, ...args)
+   * Auth endpoints never receive an implicit session token.
+   */
+  function auth(fnName) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (!/^auth[A-Z]/.test(fnName)) {
+      return Promise.reject(new Error('NOT_AUTH_FUNCTION: ' + fnName));
+    }
+    return rawCall(fnName, args);
+  }
+
+  /* =========================================================
+   * Session lifecycle
+   * =======================================================*/
+
+  function restoreSession() {
+    var stored = readStorage();
+    if (!stored) {
+      current = null;
+      return Promise.resolve(null);
+    }
+
+    return auth('authGetCurrentSession', stored.token).then(function (res) {
+      if (res && res.ok) {
+        setSession(stored.token, res.expiresAt, res.user);
+        return currentUser();
+      }
+      clearSession();
+      return null;
+    }).catch(function () {
+      // Network error — keep stored token for the next load, but
+      // treat this render as unauthenticated.
+      current = null;
+      return null;
+    });
+  }
+
+  function logout() {
+    var token = getSessionToken();
+    clearSession();
+    if (!token) return Promise.resolve();
+    return auth('authLogout', token).catch(function () { /* best effort */ });
+  }
+
+  global.api = {
+    call:           call,
+    auth:           auth,
+    setSession:     setSession,
+    clearSession:   clearSession,
+    getSessionToken: getSessionToken,
+    currentUser:    currentUser,
+    restoreSession: restoreSession,
+    logout:         logout
+  };
 })(window);
 </script>

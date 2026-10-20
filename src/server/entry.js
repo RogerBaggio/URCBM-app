@@ -4,14 +4,14 @@
 
 function doGet(e) {
   const params = (e && e.parameter) || {};
-  const route  = resolveRoute(params);
+  const route  = resolveRoute_(params);
 
   // Capture the real /exec URL while we're in an HTTP context
-  route.appUrl = registerAndGetAppUrl();
+  route.appUrl = registerAndGetAppUrl_();
 
   const template = HtmlService.createTemplateFromFile('index');
-  template.bootstrap = jsonForScript(route);
-  template.include   = include;
+  template.bootstrap = jsonForScript_(route);
+  template.include_   = include_;
   template.appUrl    = route.appUrl || '';
 
   return template
@@ -30,44 +30,58 @@ function doGet(e) {
  * @returns {{page: string, tournamentId: string|null, inviteToken: string|null,
  *           decision: string|null, role: string, tournament: Object|null}}
  */
-function resolveRoute(params) {
-  const inviteToken = String(params.invite || '').trim();
-  const tournamentId = String(params.t  || '').trim();
+function resolveRoute_(params) {
+  const authAction   = String(params.auth || '').trim().toLowerCase();
+  const authToken    = String(params.token || '').trim();
+  const authRedirect = String(params.redirect || '').trim();
+
+  // 0) Auth routes (login / register / verify / reset)
+  if (authAction) {
+    return {
+      page:         'auth',
+      authAction:   authAction,
+      authToken:    authToken,
+      authRedirect: authRedirect || '?'
+    };
+  }
+
+  const inviteToken  = String(params.invite || '').trim();
+  const tournamentId = String(params.t || '').trim();
 
   // 1) Invite link → decision-based routing
   if (inviteToken) {
-    const result = validateInviteToken(inviteToken);
+    const result = validateInviteToken_(inviteToken);
     return {
       page:         'invite',
       tournamentId: result.tournamentId,
       inviteToken:  inviteToken,
       decision:     result.decision,
       role:         result.role,
-      isLoggedIn:   !!getActiveEmail(),
+      isLoggedIn:   !!getActiveEmail_(),
       tournament:   result.tournament
     };
   }
 
   // 2) Direct tournament page
   if (tournamentId) {
-    const t = findTournamentById(tournamentId);
+    const t = findTournamentById_(tournamentId);
     if (!t) {
       return { page: 'error', code: 'NOT_FOUND', role: ROLES.GUEST };
     }
-    const ctx = getCurrentUserContext(tournamentId);
+    const ctx = getCurrentUserContext_(tournamentId);
     return {
       page:         'tournament',
       tournamentId: tournamentId,
       role:         ctx.role,
-      tournament:   publicTournament(t, ctx)
+      tournament:   publicTournament_(t, ctx)
     };
   }
 
   // 3) Default → hub
   return {
     page:         'hub',
-    isAppOwner: isAppOwner(),
-    role:         getActiveEmail() ? ROLES.PLAYER : ROLES.GUEST,
+    isAppOwner: isAppOwner_(),
+    role:         getActiveEmail_() ? ROLES.PLAYER : ROLES.GUEST,
   };
 }
 
@@ -75,11 +89,11 @@ function resolveRoute(params) {
  * Helper used inside HTML templates to include partials.
  * Usage: <?!= include('styles') ?>
  */
-function include(filename) {
+function include_(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-function jsonForScript(obj) {
+function jsonForScript_(obj) {
   return JSON.stringify(obj)
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')

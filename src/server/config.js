@@ -1,13 +1,13 @@
-function getSpreadsheetId() {
+function getSpreadsheetId_() {
   return PropertiesService.getScriptProperties().getProperty(PROP_KEYS.SPREADSHEET_ID);
 }
 
-function setSpreadsheetId(id) {
+function setSpreadsheetId_(id) {
   PropertiesService.getScriptProperties().setProperty(PROP_KEYS.SPREADSHEET_ID, id);
 }
 
-function getSpreadsheet() {
-  const id = getSpreadsheetId();
+function getSpreadsheet_() {
+  const id = getSpreadsheetId_();
   if (!id) throw new Error('Spreadsheet not configured. Run setup() once from the Apps Script editor.');
   return SpreadsheetApp.openById(id);
 }
@@ -16,8 +16,8 @@ function getSpreadsheet() {
  * Run this ONCE from the Apps Script editor.
  * Creates the spreadsheet, creates the master tab, and stores its ID.
  * =======================================================*/
-function setup() {
-  const existing = getSpreadsheetId();
+function setup_() {
+  const existing = getSpreadsheetId_();
   if (existing) {
     Logger.log('Already configured. Spreadsheet ID: ' + existing);
     return existing;
@@ -25,7 +25,7 @@ function setup() {
 
   const ss = SpreadsheetApp.create('URCBM-app Data');
   const id = ss.getId();
-  setSpreadsheetId(id);
+  setSpreadsheetId_(id);
 
   const master = ss.getSheets()[0];
   master.setName(SHEETS.MASTER);
@@ -43,7 +43,7 @@ function setup() {
  * and persists it. Subsequent reads are instant.
  * =======================================================*/
 
-function registerAndGetAppUrl() {
+function registerAndGetAppUrl_() {
   const props = PropertiesService.getScriptProperties();
   let registered = props.getProperty('WEBAPP_URL');
 
@@ -63,6 +63,6 @@ function registerAndGetAppUrl() {
   return registered || current;
 }
 
-function getAppUrl() {
+function getAppUrl_() {
   return PropertiesService.getScriptProperties().getProperty('WEBAPP_URL') || '';
 }

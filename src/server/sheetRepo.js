@@ -2,41 +2,41 @@
  * MASTER TAB — read / write
  * =======================================================*/
 
-function readMasterRows() {
-  const ss = getSpreadsheet();
+function readMasterRows_() {
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.MASTER);
   if (!sheet) throw new Error('Master tab not found. Run setup().');
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
   const values = sheet.getRange(2, 1, lastRow - 1, MASTER_HEADERS.length).getValues();
-  return values.map(rowToMaster).filter(t => t.id);
+  return values.map(rowToMaster_).filter(t => t.id);
 }
 
-function rowToMaster(row) {
+function rowToMaster_(row) {
   return {
     id:          row[0],
     name:        row[1],
     game:        row[2],
-    date:        toIsoString(row[3]),
+    date:        toIsoString_(row[3]),
     state:       row[4],
     tabName:     row[5],
     inviteToken: row[6],
     ownerEmail:  row[7],
-    created:     toIsoString(row[8]),
-    generated:   toIsoString(row[9]),
-    completed:   toIsoString(row[10])
+    created:     toIsoString_(row[8]),
+    generated:   toIsoString_(row[9]),
+    completed:   toIsoString_(row[10])
   };
 }
 
-function masterToRow(t) {
+function masterToRow_(t) {
   return [
     t.id, t.name, t.game, t.date, t.state, t.tabName, t.inviteToken,
     t.ownerEmail, t.created, t.generated, t.completed
   ];
 }
 
-function findMasterRowIndexById(id) {
-  const ss = getSpreadsheet();
+function findMasterRowIndexById_(id) {
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.MASTER);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return -1;
@@ -47,37 +47,37 @@ function findMasterRowIndexById(id) {
   return -1;
 }
 
-function appendMasterRow(t) {
-  const sheet = getSpreadsheet().getSheetByName(SHEETS.MASTER);
-  sheet.appendRow(masterToRow(t));
-  cacheRemoveMaster();
+function appendMasterRow_(t) {
+  const sheet = getSpreadsheet_().getSheetByName(SHEETS.MASTER);
+  sheet.appendRow(masterToRow_(t));
+  cacheRemoveMaster_();
 }
 
-function updateMasterRow(id, updates) {
-  const idx = findMasterRowIndexById(id);
+function updateMasterRow_(id, updates) {
+  const idx = findMasterRowIndexById_(id);
   if (idx < 0) throw new Error('Tournament not found: ' + id);
-  const sheet = getSpreadsheet().getSheetByName(SHEETS.MASTER);
-  const current = rowToMaster(
+  const sheet = getSpreadsheet_().getSheetByName(SHEETS.MASTER);
+  const current = rowToMaster_(
     sheet.getRange(idx, 1, 1, MASTER_HEADERS.length).getValues()[0]
   );
   const merged = Object.assign({}, current, updates);
-  sheet.getRange(idx, 1, 1, MASTER_HEADERS.length).setValues([masterToRow(merged)]);
-  cacheRemoveMaster();
-  cacheRemoveSnapshot(id);
+  sheet.getRange(idx, 1, 1, MASTER_HEADERS.length).setValues([masterToRow_(merged)]);
+  cacheRemoveMaster_();
+  cacheRemoveSnapshot_(id);
 }
 
-function findTournamentById(id) {
+function findTournamentById_(id) {
   if (!id) return null;
-  const rows = readMasterRows();
+  const rows = readMasterRows_();
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].id === id) return rows[i];
   }
   return null;
 }
 
-function findTournamentByInviteToken(token) {
+function findTournamentByInviteToken_(token) {
   if (!token) return null;
-  const rows = readMasterRows();
+  const rows = readMasterRows_();
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].inviteToken === token) return rows[i];
   }
@@ -88,8 +88,8 @@ function findTournamentByInviteToken(token) {
  * TOURNAMENT TAB — create + read meta
  * =======================================================*/
 
-function createTournamentTab(tabName) {
-  const ss = getSpreadsheet();
+function createTournamentTab_(tabName) {
+  const ss = getSpreadsheet_();
   if (ss.getSheetByName(tabName)) {
     throw new Error('Tab already exists: ' + tabName);
   }
@@ -113,14 +113,14 @@ function createTournamentTab(tabName) {
   return sheet;
 }
 
-function getTournamentSheet(tabName) {
-  const sheet = getSpreadsheet().getSheetByName(tabName);
+function getTournamentSheet_(tabName) {
+  const sheet = getSpreadsheet_().getSheetByName(tabName);
   if (!sheet) throw new Error('Tournament tab not found: ' + tabName);
   return sheet;
 }
 
-function writeTournamentMeta(t) {
-  const sheet = getTournamentSheet(t.tabName);
+function writeTournamentMeta_(t) {
+  const sheet = getTournamentSheet_(t.tabName);
   sheet.getRange(LAYOUT.META_VALUES_ROW_1, 1, 1, 5)
        .setValues([[t.name, t.game, t.date, t.state, t.inviteToken]]);
   sheet.getRange(LAYOUT.META_VALUES_ROW_2, 1, 1, 3)
@@ -131,8 +131,18 @@ function writeTournamentMeta(t) {
  * PARTICIPANTS — read
  * =======================================================*/
 
-function readParticipants(tabName) {
-  const sheet = getTournamentSheet(tabName);
+function readParticipants_(tabName) {
+  const sheet = getTournamentSheet_(tabName);
+
+  // Detect pre-V1 schema and fail loudly rather than silently misread.
+  const firstHeader = sheet.getRange(LAYOUT.PARTICIPANTS_HEADER, 1).getValue();
+  if (firstHeader !== 'User ID') {
+    throw new Error(
+      'PARTICIPANT_SCHEMA_OUTDATED: tab "' + tabName +
+      '" uses the pre-V1 participant schema and must be recreated.'
+    );
+  }
+
   const values = sheet
     .getRange(LAYOUT.PARTICIPANTS_START, 1, LAYOUT.PARTICIPANTS_MAX, PARTICIPANT_HEADERS.length)
     .getValues();
@@ -142,20 +152,31 @@ function readParticipants(tabName) {
     const row = values[i];
     if (!row[0]) continue; // empty row → skip
     out.push({
-      email:       String(row[0]).toLowerCase(),
-      googleName:  row[1],
-      displayName: row[2],
-      role:        row[3],
-      joinedAt:    toIsoString(row[4])
+      userId:      String(row[0]).trim(),
+      email:       String(row[1]).toLowerCase(),
+      googleName:  row[2] || '',
+      displayName: row[3] || '',
+      role:        row[4] || '',
+      joinedAt:    toIsoString_(row[5])
     });
   }
   return out;
 }
 
-function readParticipantByEmail(tabName, email) {
+function readParticipantByUserId_(tabName, userId) {
+  const target = String(userId || '').trim();
+  if (!target) return null;
+  const list = readParticipants_(tabName);
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].userId === target) return list[i];
+  }
+  return null;
+}
+
+function readParticipantByEmail_(tabName, email) {
   const target = String(email || '').toLowerCase();
   if (!target) return null;
-  const list = readParticipants(tabName);
+  const list = readParticipants_(tabName);
   for (let i = 0; i < list.length; i++) {
     if (list[i].email === target) return list[i];
   }
@@ -166,13 +187,13 @@ function readParticipantByEmail(tabName, email) {
  * PARTICIPANTS — write
  * =======================================================*/
 
-function writeParticipants(tournament, list) {
-  const sheet = getTournamentSheet(tournament.tabName);
+function writeParticipants_(tournament, list) {
+  const sheet = getTournamentSheet_(tournament.tabName);
 
   // Wipe the block first
   const blank = [];
   for (let i = 0; i < LAYOUT.PARTICIPANTS_MAX; i++) {
-    blank.push(['', '', '', '', '']);
+    blank.push(['', '', '', '', '', '']);
   }
   sheet.getRange(
     LAYOUT.PARTICIPANTS_START, 1,
@@ -181,7 +202,12 @@ function writeParticipants(tournament, list) {
 
   if (list.length) {
     const rows = list.map(p => [
-      p.email, p.googleName, p.displayName, p.role, p.joinedAt
+      p.userId,
+      p.email,
+      p.googleName || '',
+      p.displayName,
+      p.role,
+      p.joinedAt
     ]);
     sheet.getRange(
       LAYOUT.PARTICIPANTS_START, 1,
@@ -189,5 +215,5 @@ function writeParticipants(tournament, list) {
     ).setValues(rows);
   }
 
-  cacheRemoveSnapshot(tournament.id);
+  cacheRemoveSnapshot_(tournament.id);
 }

@@ -8,6 +8,9 @@
     var pages = global.Pages || {};
     try {
       switch (boot.page) {
+        case 'auth':
+          if (pages.Auth) return pages.Auth.render(boot);
+          break;
         case 'invite':
           if (pages.Invite) return pages.Invite.render(boot);
           break;
@@ -17,8 +20,6 @@
         case 'error':
           if (pages.Error) return pages.Error.render(boot);
           break;
-        case 'not-found': // legacy safety
-          return global.H.setMain(global.H.errorBlock('Not found.'));;
         default:
           if (pages.Hub) return pages.Hub.render(boot);
       }
@@ -40,7 +41,6 @@
       btn.disabled = true;
       setTimeout(function () { btn.disabled = false; }, 10000);
       global.H.setStatus('Refreshed at ' + new Date().toLocaleTimeString());
-      // Real refresh wired by page modules in Step 16.
       if (global.App && typeof global.App.onRefresh === 'function') {
         global.App.onRefresh();
       }
@@ -48,11 +48,27 @@
   }
 
   global.App = global.App || {};
-  global.App.onRefresh = null; // pages can assign
+  global.App.onRefresh = null;
+  global.App.onSessionChange = null;
+
+  global.addEventListener('urcbm:session-changed', function (ev) {
+    if (global.App && typeof global.App.onSessionChange === 'function') {
+      try { global.App.onSessionChange(ev.detail); } catch (e) { /* ignore */ }
+    }
+  });
 
   function boot_() {
     wireFooter();
-    render();
+
+    var restore = (global.api && typeof global.api.restoreSession === 'function')
+      ? global.api.restoreSession()
+      : Promise.resolve(null);
+
+    restore.then(function () {
+      render();
+    }).catch(function () {
+      render();
+    });
   }
 
   if (document.readyState === 'loading') {

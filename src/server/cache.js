@@ -1,10 +1,10 @@
-function cacheGet(key) {
+function cacheGet_(key) {
   const raw = CacheService.getScriptCache().get(key);
   if (!raw) return null;
   try { return JSON.parse(raw); } catch (e) { return null; }
 }
 
-function cachePut(key, value, ttlSeconds) {
+function cachePut_(key, value, ttlSeconds) {
   CacheService.getScriptCache().put(
     key,
     JSON.stringify(value),
@@ -12,14 +12,14 @@ function cachePut(key, value, ttlSeconds) {
   );
 }
 
-function cacheRemove(key) {
+function cacheRemove_(key) {
   CacheService.getScriptCache().remove(key);
 }
 
-function cacheRemoveMaster() {
-  cacheRemove(CACHE_KEYS.MASTER_LIST);
+function cacheRemoveMaster_() {
+  cacheRemove_(CACHE_KEYS.MASTER_LIST);
 }
 
-function cacheRemoveSnapshot(tournamentId) {
-  cacheRemove(CACHE_KEYS.SNAPSHOT(tournamentId));
+function cacheRemoveSnapshot_(tournamentId) {
+  cacheRemove_(CACHE_KEYS.SNAPSHOT(tournamentId));
 }

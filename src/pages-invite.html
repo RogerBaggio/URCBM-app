@@ -23,28 +23,48 @@
    * =======================================================*/
   function render() {
     attachDialogCloseHandler();
-    
-    var t          = boot.tournament;
-    var decision   = boot.decision;
-    var role       = boot.role || 'guest';
-    var isLoggedIn = !!boot.isLoggedIn;
 
-    // Redirect to the tournament page when brackets exist
+    var token = boot.inviteToken;
+    if (!token) {
+      return showDead('This invitation link is missing its token.', '❓');
+    }
+
+    global.H.setMain(global.H.spinner('Loading invitation…'));
+    global.H.setStatus('Loading');
+
+    global.api.call('apiGetInviteDecision', token).then(function (result) {
+      draw(result);
+    }).catch(function (err) {
+      showDead('Could not load invitation: ' + err.message, '⚠️');
+    });
+  }
+
+  function draw(result) {
+    var decision = result && result.decision;
+    var t        = result && result.tournament;
+    var role     = (result && result.role) || 'guest';
+    var user     = (global.api && global.api.currentUser) ? global.api.currentUser() : null;
+
     if (decision === 'watch' && t && t.id) {
-      global.H.navigateTop('?t=' + encodeURIComponent(t.id));
+      var watchUrl = '?t=' + encodeURIComponent(t.id);
+      global.H.setMain(
+        '<div class="card"><p>Loading tournament…</p>' +
+        '<p><a class="btn-primary" href="' + watchUrl + '">Go to tournament →</a></p></div>'
+      );
+      global.H.navigateTop(watchUrl);
       return;
     }
     if (decision === 'invalid')   return showDead('That invite link is invalid or has been revoked.', '🔒');
     if (decision === 'cancelled') return showDead('This tournament was cancelled.', '🎈');
     if (!t)                       return showDead('Tournament not found.', '❓');
 
-    state.t          = t;
-    state.role       = role;
-    state.isLoggedIn = isLoggedIn;
+    state.t = t;
+    state.role = role;
+    state.isLoggedIn = !!user;
 
     var html = '';
     html += tournamentHeader(t);
-    html += messageCard(decision, isLoggedIn, role);
+    html += messageCard(decision, state.isLoggedIn, role);
     html += actionRow(decision, role);
     if (role === 'owner') html += ownerTools();
     html += '<p class="back-to-hub"><a href="?">← Back to Hub</a></p>';
@@ -52,22 +72,7 @@
 
     global.H.setMain(html);
     global.H.setStatus('Ready');
-
     wire(decision, role);
-  }
-
-  /* =========================================================
-   * Sections
-   * =======================================================*/
-  function tournamentHeader(t) {
-    return '<div class="card invite-header">' +
-      '<h2>' + global.H.escapeHtml(t.name) + '</h2>' +
-      '<p class="muted">' +
-        '🎮 ' + global.H.escapeHtml(t.game) +
-        (t.date ? ' &nbsp;·&nbsp; 📅 ' + global.H.escapeHtml(t.date) : '') +
-      '</p>' +
-      '<p class="badge">' + global.H.escapeHtml(t.state) + '</p>' +
-    '</div>';
   }
 
   function messageCard(decision, isLoggedIn, role) {
@@ -78,7 +83,7 @@
       else                          msg = "🎉 You're already registered. Sit tight!";
     } else if (decision === 'register') {
       if (!isLoggedIn) {
-        msg = "🕵️ Who goes there? Log in with your Google account, refresh, and step into the arena.";
+        msg = "🕵️ You need to be logged in to register for this tournament.";
       } else {
         msg = "🥊 Ready to throw hands? Pick a nickname and hit the button below to enter.";
       }
@@ -102,19 +107,35 @@
       );
       buttons.push('<button id="register-btn" class="btn-primary">Register</button>');
     } else if (decision === 'register' && !state.isLoggedIn) {
+      var backHere = '?invite=' + encodeURIComponent(boot.inviteToken);
+      var loginUrl = '?auth=login&redirect=' + encodeURIComponent(backHere);
       buttons.push(
-        '<a class="btn-primary" href="' + window.location.href + '" ' +
-        'onclick="return false;" disabled>Log in to register</a>'
+        '<a class="btn-primary" href="' + global.H.escapeHtml(loginUrl) + '">' +
+          'Log in to register' +
+        '</a>'
       );
     }
 
-    // Owner-only share button appears whenever the tournament has a token
     if (role === 'owner' && state.t.inviteToken) {
       buttons.push('<button id="share-btn" class="btn-secondary">🔗 Share invitation</button>');
     }
 
     if (!buttons.length) return '';
     return '<div class="invite-actions">' + buttons.join('') + '</div>';
+  }
+
+  /* =========================================================
+   * Sections
+   * =======================================================*/
+  function tournamentHeader(t) {
+    return '<div class="card invite-header">' +
+      '<h2>' + global.H.escapeHtml(t.name) + '</h2>' +
+      '<p class="muted">' +
+        '🎮 ' + global.H.escapeHtml(t.game) +
+        (t.date ? ' &nbsp;·&nbsp; 📅 ' + global.H.escapeHtml(t.date) : '') +
+      '</p>' +
+      '<p class="badge">' + global.H.escapeHtml(t.state) + '</p>' +
+    '</div>';
   }
 
   function ownerTools() {
@@ -239,7 +260,7 @@
       displayName:  name
     }).then(function () {
       global.H.setStatus('Registered! Refreshing…');
-      setTimeout(function () { global.H.reloadTop(); }, 800);
+      global.H.reloadTop();
     }).catch(function (e) {
       err.textContent = friendlyError(e.message);
       err.hidden = false;
@@ -254,8 +275,7 @@
     if (c === 'ALREADY_REGISTERED')  return "You're already registered.";
     if (c === 'REGISTRATION_CLOSED') return 'Registration closed.';
     if (c === 'TOURNAMENT_FULL')     return 'This tournament is full.';
-    if (c === 'AUTH_REQUIRED')       return 'Please log in with Google and refresh.';
-    if (c === 'OWNER_CANNOT_REGISTER') return "Owners can't register as players.";
+    if (c === 'AUTH_REQUIRED')       return 'Please log in and refresh.';
     return 'Something went wrong: ' + c;
   }
 
@@ -335,9 +355,13 @@
 
     global.api.call('apiGetParticipants', state.t.id).then(function (players) {
       original = players.slice();
-      working  = players.map(function (p) {
-        return { email: p.email || p.displayName, displayName: p.displayName,
-                 emailReal: p.email || '', role: p.role };
+      working = players.map(function (p) {
+        return {
+          userId:      p.userId || '',
+          displayName: p.displayName,
+          emailReal:   p.email || '',
+          role:        p.role
+        };
       });
       toRemove = {};
       renderList();
@@ -421,19 +445,16 @@
       var steps = [];
 
       // Removals first
-      Object.keys(toRemove).forEach(function (email) {
-        steps.push(function () { return global.api.call('apiRemovePlayer', state.t.id, email); });
+      Object.keys(toRemove).forEach(function (userId) {
+        steps.push(function () { return global.api.call('apiRemovePlayer', state.t.id, userId); });
       });
 
-      // Then role changes
       working.forEach(function (p) {
-        var orig = original.find(function (o) {
-          return (o.email || o.displayName) === (p.emailReal || p.displayName);
-        });
+        var orig = original.find(function (o) { return o.userId === p.userId; });
         if (!orig) return;
         if (orig.role !== p.role) {
           var fn = p.role === 'manager' ? 'apiPromoteToManager' : 'apiRevokeManager';
-          steps.push(function () { return global.api.call(fn, state.t.id, p.emailReal); });
+          steps.push(function () { return global.api.call(fn, state.t.id, p.userId); });
         }
       });
 

@@ -2,7 +2,7 @@
  * IDs, tokens, dates
  * =======================================================*/
 
-function makeId() {
+function makeId_() {
   if (typeof Utilities !== 'undefined' && Utilities.getUuid) {
     return Utilities.getUuid();
   }
@@ -12,7 +12,7 @@ function makeId() {
   return ts + '_' + rand;
 }
 
-function makeInviteToken() {
+function makeInviteToken_() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   let out = '';
   for (let i = 0; i < 20; i++) {
@@ -21,11 +21,11 @@ function makeInviteToken() {
   return out;
 }
 
-function nowIso() {
+function nowIso_() {
   return new Date().toISOString();
 }
 
-function toIsoString(value) {
+function toIsoString_(value) {
   if (!value) return '';
   if (value instanceof Date) return value.toISOString();
   return String(value);
@@ -35,7 +35,7 @@ function toIsoString(value) {
  * Sanitization
  * =======================================================*/
 
-function sanitizeText(text) {
+function sanitizeText_(text) {
   if (text == null) return '';
   return String(text)
     .replace(/&/g, '&amp;')
@@ -46,7 +46,7 @@ function sanitizeText(text) {
 }
 
 // Defensive against spreadsheet formula interpretation.
-function sanitizeForSheet(text) {
+function sanitizeForSheet_(text) {
   if (text == null) return '';
   const s = String(text);
   return /^[=+\-@]/.test(s) ? "'" + s : s;
@@ -64,7 +64,7 @@ const DISPLAY_NAME_REGEX = /^[A-Za-z0-9 _\-\.']+$/;
  * @param {string[]} [existingNames]
  * @returns {{valid: boolean, value?: string, error?: string}}
  */
-function validateDisplayName(name, existingNames) {
+function validateDisplayName_(name, existingNames) {
   if (typeof name !== 'string') {
     return { valid: false, error: 'Display name must be a string.' };
   }
@@ -85,7 +85,7 @@ function validateDisplayName(name, existingNames) {
   return { valid: true, value: trimmed };
 }
 
-function buildTabName(id) {
+function buildTabName_(id) {
   const short = String(id).replace(/[^A-Za-z0-9]/g, '').slice(0, 12);
   return (typeof SHEETS !== 'undefined' ? SHEETS.TOURNAMENT_PREFIX : 'T_') + short;
 }
@@ -96,15 +96,15 @@ function buildTabName(id) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    makeId,
-    makeInviteToken,
-    nowIso,
-    toIsoString,
-    sanitizeText,
-    sanitizeForSheet,
-    validateDisplayName,
-    buildTabName,
-    DISPLAY_NAME_MAX,
-    DISPLAY_NAME_REGEX
+    'makeId': makeId_,
+    'makeInviteToken': makeInviteToken_,
+    'nowIso': nowIso_,
+    'toIsoString': toIsoString_,
+    'sanitizeText': sanitizeText_,
+    'sanitizeForSheet': sanitizeForSheet_,
+    'validateDisplayName': validateDisplayName_,
+    'buildTabName': buildTabName_,
+    'DISPLAY_NAME_MAX': DISPLAY_NAME_MAX,
+    'DISPLAY_NAME_REGEX': DISPLAY_NAME_REGEX
   };
 }

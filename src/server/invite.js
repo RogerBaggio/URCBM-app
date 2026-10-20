@@ -17,7 +17,7 @@
  *   tournament: object|null
  * }}
  */
-function validateInviteToken(token) {
+function validateInviteToken_(token) {
   const clean = String(token || '').trim();
   const empty = {
     valid: false,
@@ -29,14 +29,14 @@ function validateInviteToken(token) {
 
   if (!clean) return empty;
 
-  const t = findTournamentByInviteToken(clean);
+  const t = findTournamentByInviteToken_(clean);
   if (!t) return empty;
 
-  return buildInviteResult(t);
+  return buildInviteResult_(t);
 }
 
-function buildInviteResult(t) {
-  const ctx  = getCurrentUserContext(t.id);
+function buildInviteResult_(t) {
+  const ctx  = getCurrentUserContext_(t.id);
   const role = ctx.role;
 
   const isRegistered =
@@ -66,6 +66,6 @@ function buildInviteResult(t) {
     decision,
     role,
     tournamentId: t.id,
-    tournament: publicTournament(t, ctx)
+    tournament: publicTournament_(t, ctx)
   };
 }

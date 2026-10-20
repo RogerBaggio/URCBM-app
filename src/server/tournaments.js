@@ -2,9 +2,9 @@
  * Create
  * =======================================================*/
 
-function createTournament(input) {
-  assertAppOwner();
-  const email = getActiveEmail();
+function createTournament_(input) {
+  assertAppOwner_();
+  const email = getActiveEmail_();
   const name = String(input && input.name || '').trim();
   const game = String(input && input.game || '').trim();
   const date = String(input && input.date || '').trim();
@@ -12,47 +12,47 @@ function createTournament(input) {
   if (!name || name.length > 80) throw new Error('INVALID_NAME');
   if (!game || game.length > 80) throw new Error('INVALID_GAME');
 
-  const id = makeId();
-  const tabName = buildTabName(id);
-  const inviteToken = makeInviteToken();
+  const id = makeId_();
+  const tabName = buildTabName_(id);
+  const inviteToken = makeInviteToken_();
 
-  createTournamentTab(tabName);
+  createTournamentTab_(tabName);
 
   const t = {
     id,
-    name:        sanitizeForSheet(name),
-    game:        sanitizeForSheet(game),
+    name:        sanitizeForSheet_(name),
+    game:        sanitizeForSheet_(game),
     date:        date,
     state:       TOURNAMENT_STATES.REGISTRATION_OPEN,
     tabName,
     inviteToken,
     ownerEmail:  email,
-    created:     nowIso(),
+    created:     nowIso_(),
     generated:   '',
     completed:   ''
   };
 
-  appendMasterRow(t);
-  writeTournamentMeta(t);
+  appendMasterRow_(t);
+  writeTournamentMeta_(t);
 
-  return publicTournament(t, { role: ROLES.OWNER, email });
+  return publicTournament_(t, { role: ROLES.OWNER, email });
 }
 
 /* =========================================================
  * Read
  * =======================================================*/
 
-function getTournament(id) {
-  const t = findTournamentById(id);
+function getTournament_(id) {
+  const t = findTournamentById_(id);
   if (!t) return null;
-  return publicTournament(t, getCurrentUserContext(id));
+  return publicTournament_(t, getCurrentUserContext_(id));
 }
 
 /**
  * Sanitized tournament object for the frontend.
  * Hides inviteToken + ownerEmail from everyone except owner.
  */
-function publicTournament(t, ctx) {
+function publicTournament_(t, ctx) {
   const role = (ctx && ctx.role) || ROLES.GUEST;
   const out = {
     id:        t.id,
@@ -78,38 +78,38 @@ function publicTournament(t, ctx) {
  * State transitions (owner only)
  * =======================================================*/
 
-function completeTournament(id) {
-  assertOwner(id);
-  const t = requireTournament(id);
+function completeTournament_(id) {
+  assertOwner_(id);
+  const t = requireTournament_(id);
   if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) {
     throw new Error('INVALID_STATE');
   }
   t.state     = TOURNAMENT_STATES.COMPLETED;
-  t.completed = nowIso();
-  updateMasterRow(id, { state: t.state, completed: t.completed });
-  writeTournamentMeta(t);
-  return publicTournament(t, getCurrentUserContext(id));
+  t.completed = nowIso_();
+  updateMasterRow_(id, { state: t.state, completed: t.completed });
+  writeTournamentMeta_(t);
+  return publicTournament_(t, getCurrentUserContext_(id));
 }
 
-function cancelTournament(id) {
-  assertOwner(id);
-  const t = requireTournament(id);
+function cancelTournament_(id) {
+  assertOwner_(id);
+  const t = requireTournament_(id);
   if (t.state === TOURNAMENT_STATES.CANCELLED) {
     throw new Error('ALREADY_CANCELLED');
   }
   t.state = TOURNAMENT_STATES.CANCELLED;
-  updateMasterRow(id, { state: t.state });
-  writeTournamentMeta(t);
-  return publicTournament(t, getCurrentUserContext(id));
+  updateMasterRow_(id, { state: t.state });
+  writeTournamentMeta_(t);
+  return publicTournament_(t, getCurrentUserContext_(id));
 }
 
 /* =========================================================
  * Update metadata info (owner only)
  * =======================================================*/
 
-function updateTournament(id, input) {
-  assertOwner(id);
-  const t = requireTournament(id);
+function updateTournament_(id, input) {
+  assertOwner_(id);
+  const t = requireTournament_(id);
   if (t.state === TOURNAMENT_STATES.CANCELLED ||
       t.state === TOURNAMENT_STATES.COMPLETED) {
     throw new Error('INVALID_STATE');
@@ -118,32 +118,32 @@ function updateTournament(id, input) {
   if (input.name != null) {
     const n = String(input.name).trim();
     if (!n || n.length > 80) throw new Error('INVALID_NAME');
-    t.name = sanitizeForSheet(n);
+    t.name = sanitizeForSheet_(n);
     updates.name = t.name;
   }
   if (input.game != null) {
     const g = String(input.game).trim();
     if (!g || g.length > 80) throw new Error('INVALID_GAME');
-    t.game = sanitizeForSheet(g);
+    t.game = sanitizeForSheet_(g);
     updates.game = t.game;
   }
   if (input.date != null) {
     t.date = String(input.date).trim();
     updates.date = t.date;
   }
-  updateMasterRow(id, updates);
-  writeTournamentMeta(t);
-  return publicTournament(t, getCurrentUserContext(id));
+  updateMasterRow_(id, updates);
+  writeTournamentMeta_(t);
+  return publicTournament_(t, getCurrentUserContext_(id));
 }
 
 /* =========================================================
  * Archive (soft delete — rename tab + hide)
  * =======================================================*/
 
-function archiveTournament(id) {
-  assertOwner(id);
-  const t = requireTournament(id);
-  const ss = getSpreadsheet();
+function archiveTournament_(id) {
+  assertOwner_(id);
+  const t = requireTournament_(id);
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(t.tabName);
   if (!sheet) throw new Error('TAB_NOT_FOUND');
 
@@ -153,32 +153,32 @@ function archiveTournament(id) {
     sheet.hideSheet();
   }
   t.tabName = archivedName;
-  updateMasterRow(id, { tabName: archivedName });
-  return publicTournament(t, getCurrentUserContext(id));
+  updateMasterRow_(id, { tabName: archivedName });
+  return publicTournament_(t, getCurrentUserContext_(id));
 }
 
 /* =========================================================
  * Invite token management (owner only)
  * =======================================================*/
 
-function generateInviteToken(id) {
-  assertOwner(id);
-  const t = requireTournament(id);
+function generateInviteToken_(id) {
+  assertOwner_(id);
+  const t = requireTournament_(id);
   if (t.state !== TOURNAMENT_STATES.REGISTRATION_OPEN) {
     throw new Error('INVALID_STATE');
   }
-  t.inviteToken = makeInviteToken();
-  updateMasterRow(id, { inviteToken: t.inviteToken });
-  writeTournamentMeta(t);
+  t.inviteToken = makeInviteToken_();
+  updateMasterRow_(id, { inviteToken: t.inviteToken });
+  writeTournamentMeta_(t);
   return t.inviteToken;
 }
 
-function revokeInviteToken(id) {
-  assertOwner(id);
-  const t = requireTournament(id);
+function revokeInviteToken_(id) {
+  assertOwner_(id);
+  const t = requireTournament_(id);
   t.inviteToken = '';
-  updateMasterRow(id, { inviteToken: '' });
-  writeTournamentMeta(t);
+  updateMasterRow_(id, { inviteToken: '' });
+  writeTournamentMeta_(t);
   return true;
 }
 
@@ -186,8 +186,8 @@ function revokeInviteToken(id) {
  * Internal helper
  * =======================================================*/
 
-function requireTournament(id) {
-  const t = findTournamentById(id);
+function requireTournament_(id) {
+  const t = findTournamentById_(id);
   if (!t) throw new Error('NOT_FOUND');
   return t;
 }

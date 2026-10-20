@@ -1,93 +1,143 @@
 /* =========================================================
  * Client-facing API
- * Every function here is callable from the client.
- * Return values must be JSON-safe (no Date, no functions).
+ *
+ * Existing api... functions are intentionally public.
+ * Internal business functions are private (trailing underscore).
+ *
+ * Contract:
+ * - Public reads accept optional sessionToken as the final argument.
+ * - Mutations require sessionToken as the final argument.
+ * - Authentication endpoints remain in authService.js.
  * =======================================================*/
 
-function apiGetTournament(id) {
-  return getTournament(id);
+function apiGetTournament(id, sessionToken) {
+  return withOptionalAuthSession_(sessionToken, function () {
+    return getTournament_(id);
+  });
 }
 
-function apiGetInviteDecision(token) {
-  return validateInviteToken(token);
+function apiGetInviteDecision(inviteToken, sessionToken) {
+  return withOptionalAuthSession_(sessionToken, function () {
+    return validateInviteToken_(inviteToken);
+  });
 }
 
-function apiGetCurrentUserRole(id) {
-  return resolveRole(id);
+function apiGetCurrentUserRole(id, sessionToken) {
+  return withOptionalAuthSession_(sessionToken, function () {
+    return resolveRole_(id);
+  });
 }
 
-function apiCreateTournament(input) {
-  return createTournament(input);
+function apiCreateTournament(input, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return createTournament_(input);
+  });
 }
 
-function apiRegisterPlayer(input) {
-  return registerPlayer(input);
+function apiRegisterPlayer(input, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return registerPlayer_(input);
+  });
 }
 
-function apiGetParticipants(id) {
-  return getParticipants(id);
+function apiGetParticipants(id, sessionToken) {
+  return withOptionalAuthSession_(sessionToken, function () {
+    return getParticipants_(id);
+  });
 }
 
-function apiRemovePlayer(id, email) {
-  return removePlayer(id, email);
+function apiRemovePlayer(id, targetUserId, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return removePlayer_(id, targetUserId);
+  });
 }
 
-function apiPromoteToManager(id, email) {
-  return promoteToManager(id, email);
+function apiPromoteToManager(id, targetUserId, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return promoteToManager_(id, targetUserId);
+  });
 }
 
-function apiGenerateBracket(id) {
-  return generateBracket(id);
+function apiRevokeManager(id, targetUserId, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return revokeManager_(id, targetUserId);
+  });
 }
 
-function apiGetMatches(id) {
-  return getMatches(id);
+function apiGenerateBracket(id, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return generateBracket_(id);
+  });
 }
 
-function apiGetSnapshot(id) {
-  return getTournamentSnapshot(id);
+function apiGetMatches(id, sessionToken) {
+  return withOptionalAuthSession_(sessionToken, function () {
+    return getMatches_(id);
+  });
 }
 
-function apiUpdateTournament(id, input) { 
-  return updateTournament(id, input); 
+function apiGetSnapshot(id, sessionToken) {
+  return withOptionalAuthSession_(sessionToken, function () {
+    return getTournamentSnapshot_(id);
+  });
 }
 
-function apiCompleteTournament(id) {
-  return completeTournament(id);
+function apiUpdateTournament(id, input, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return updateTournament_(id, input);
+  });
 }
 
-function apiCancelTournament(id) {
-  return cancelTournament(id);
+function apiCompleteTournament(id, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return completeTournament_(id);
+  });
 }
 
-function apiArchiveTournament(id) {
-  return archiveTournament(id);
+function apiCancelTournament(id, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return cancelTournament_(id);
+  });
 }
 
-function apiGenerateInviteToken(id) {
-  return generateInviteToken(id);
+function apiArchiveTournament(id, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return archiveTournament_(id);
+  });
 }
 
-function apiRevokeInviteToken(id) {
-  return revokeInviteToken(id);
+function apiGenerateInviteToken(id, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return generateInviteToken_(id);
+  });
 }
 
-function apiRevokeManager(id, email) {
-  return revokeManager(id, email);
+function apiRevokeInviteToken(id, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return revokeInviteToken_(id);
+  });
 }
 
-function apiPickWinner(id, mi, winner) {
-  return pickWinner(id, mi, winner);
+function apiPickWinner(id, matchIndex, winner, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return pickWinner_(id, matchIndex, winner);
+  });
 }
 
-function apiSetMatchScores(id, mi, a, b) {
-  return setMatchScores(id, mi, a, b);
+function apiSetMatchScores(id, matchIndex, scoreA, scoreB, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return setMatchScores_(id, matchIndex, scoreA, scoreB);
+  });
 }
 
-function apiClearWinner(id, mi) {
-  return clearWinner(id, mi);
+function apiClearWinner(id, matchIndex, sessionToken) {
+  return withAuthSession_(sessionToken, function () {
+    return clearWinner_(id, matchIndex);
+  });
 }
 
-function apiGetHub() {
-  return getHub();
+function apiGetHub(sessionToken) {
+  return withOptionalAuthSession_(sessionToken, function () {
+    return getHub_();
+  });
 }

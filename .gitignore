@@ -4,3 +4,4 @@ node_modules/
 .vscode/
 gerador_contexto_ia.py
 contexto_projeto_*.md
+test/testSnipets.js

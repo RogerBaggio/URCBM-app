@@ -1,6 +1,6 @@
 //gets tournament lists by state
-function getHub() {
-  const all = readMasterRows();
+function getHub_() {
+  const all = readMasterRows_();
   const buckets = { open: [], ongoing: [], completed: [] };
 
   for (let i = 0; i < all.length; i++) {
@@ -27,7 +27,7 @@ function getHub() {
   buckets.completed.sort(byDateDesc);
 
   return {
-    isAppOwner: isAppOwner(),
+    isAppOwner: isAppOwner_(),
     open: buckets.open,
     ongoing: buckets.ongoing,
     completed: buckets.completed

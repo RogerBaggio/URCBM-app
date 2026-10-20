@@ -37,7 +37,7 @@ const MASTER_HEADERS = [
 ];
 
 // Tournament tab headers
-const PARTICIPANT_HEADERS = ['Email', 'Google Name', 'Display Name', 'Role', 'Joined At'];
+const PARTICIPANT_HEADERS = ['User ID', 'Email', 'Google Name', 'Display Name', 'Role', 'Joined At'];
 const MATCH_HEADERS = [
   'Match Index', 'Player A', 'Player A Score', 'Player B',
   'Player B Score', 'Winner', 'Updated At', 'Updated By'

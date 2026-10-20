@@ -4,7 +4,7 @@
 
 const BYE = 'BYE';
 
-function defaultNow() {
+function defaultNow_() {
   return new Date().toISOString();
 }
 
@@ -13,7 +13,7 @@ function defaultNow() {
  * @param {number} n
  * @returns {number}
  */
-function nextBracketSize(n) {
+function nextBracketSize_(n) {
   if (n < 2) throw new Error('TOO_FEW_PLAYERS');
   if (n <= 4)  return 4;
   if (n <= 8)  return 8;
@@ -25,7 +25,7 @@ function nextBracketSize(n) {
 /**
  * Fisher–Yates shuffle. `rng` defaults to Math.random.
  */
-function shuffleArray(arr, rng) {
+function shuffleArray_(arr, rng) {
   const a = arr.slice();
   const r = rng || Math.random;
   for (let i = a.length - 1; i > 0; i--) {
@@ -42,10 +42,10 @@ function shuffleArray(arr, rng) {
  * @param {Function} [rng]
  * @returns {string[]}
  */
-function buildFirstRoundSlots(players, bracketSize, rng) {
+function buildFirstRoundSlots_(players, bracketSize, rng) {
   const N = players.length;
   const half = bracketSize / 2;
-  const shuffled = shuffleArray(players, rng);
+  const shuffled = shuffleArray_(players, rng);
 
   const evenBatch = shuffled.slice(0, Math.min(N, half));
   const oddBatch  = shuffled.slice(Math.min(N, half));
@@ -57,7 +57,7 @@ function buildFirstRoundSlots(players, bracketSize, rng) {
 
   const oddPositions = [];
   for (let i = 1; i < bracketSize; i += 2) oddPositions.push(i);
-  const shuffledOdd = shuffleArray(oddPositions, rng);
+  const shuffledOdd = shuffleArray_(oddPositions, rng);
   for (let i = 0; i < oddBatch.length; i++) {
     slots[shuffledOdd[i]] = oddBatch[i];
   }
@@ -72,8 +72,8 @@ function buildFirstRoundSlots(players, bracketSize, rng) {
  * @param {number} bracketSize
  * @param {Function} [nowFn]
  */
-function buildMatches(slots, bracketSize, nowFn) {
-  const now = nowFn || defaultNow;
+function buildMatches_(slots, bracketSize, nowFn) {
+  const now = nowFn || defaultNow_;
   const matches = [];
   const totalRounds = Math.round(Math.log2(bracketSize));
   const half = bracketSize / 2;
@@ -114,19 +114,19 @@ function buildMatches(slots, bracketSize, nowFn) {
     }
   }
 
-  propagateByes(matches, bracketSize);
+  propagateByes_(matches, bracketSize);
   return matches;
 }
 
 /**
  * Propagates round-1 byes to round 2.
  */
-function propagateByes(matches, bracketSize) {
+function propagateByes_(matches, bracketSize) {
   const half = bracketSize / 2;
   for (let m = 0; m < half; m++) {
     const match = matches[m];
     if (!match.winner) continue;
-    const nextIdx = findMatchIndex(matches, 2, Math.floor(m / 2) + 1);
+    const nextIdx = findMatchIndex_(matches, 2, Math.floor(m / 2) + 1);
     const side = (m % 2 === 0) ? 'playerA' : 'playerB';
     matches[nextIdx][side] = match.winner;
   }
@@ -136,17 +136,17 @@ function propagateByes(matches, bracketSize) {
  * Indexing helpers
  * =======================================================*/
 
-function matchIndexString(round, matchInRound) {
+function matchIndexString_(round, matchInRound) {
   return 'R' + round + '-M' + matchInRound;
 }
 
-function parseMatchIndex(str) {
+function parseMatchIndex_(str) {
   const m = /^R(\d+)-M(\d+)$/.exec(String(str || ''));
   if (!m) return null;
   return { round: parseInt(m[1], 10), matchInRound: parseInt(m[2], 10) };
 }
 
-function findMatchIndex(matches, round, matchInRound) {
+function findMatchIndex_(matches, round, matchInRound) {
   for (let i = 0; i < matches.length; i++) {
     if (matches[i].round === round && matches[i].matchInRound === matchInRound) return i;
   }
@@ -157,7 +157,7 @@ function findMatchIndex(matches, round, matchInRound) {
  * Scoring
  * =======================================================*/
 
-function validateScore(value) {
+function validateScore_(value) {
   if (value === '' || value === null || value === undefined) {
     throw new Error('SCORE_REQUIRED');
   }
@@ -174,10 +174,10 @@ function validateScore(value) {
  * Writes a winner into the correct slot of the next-round match.
  * Mutates `matches` in place.
  */
-function advanceWinner(matches, round, matchInRound, winner) {
+function advanceWinner_(matches, round, matchInRound, winner) {
   const nextRound = round + 1;
   const nextMatchInRound = Math.ceil(matchInRound / 2);
-  const idx = findMatchIndex(matches, nextRound, nextMatchInRound);
+  const idx = findMatchIndex_(matches, nextRound, nextMatchInRound);
   if (idx === -1) return; // final match, no downstream
   const slot = (matchInRound % 2 === 1) ? 'playerA' : 'playerB';
   matches[idx][slot] = winner;
@@ -188,10 +188,10 @@ function advanceWinner(matches, round, matchInRound, winner) {
  * and recursively clears further rounds if that player also won there.
  * Mutates `matches` in place.
  */
-function clearDownstream(matches, round, matchInRound, oldWinner) {
+function clearDownstream_(matches, round, matchInRound, oldWinner) {
   const nextRound = round + 1;
   const nextMatchInRound = Math.ceil(matchInRound / 2);
-  const idx = findMatchIndex(matches, nextRound, nextMatchInRound);
+  const idx = findMatchIndex_(matches, nextRound, nextMatchInRound);
   if (idx === -1) return;
 
   const next = matches[idx];
@@ -208,7 +208,7 @@ function clearDownstream(matches, round, matchInRound, oldWinner) {
     next.playerBScore = '';
     next.updatedAt = '';
     next.updatedBy = '';
-    clearDownstream(matches, nextRound, nextMatchInRound, oldWinner);
+    clearDownstream_(matches, nextRound, nextMatchInRound, oldWinner);
   }
 }
 
@@ -218,17 +218,17 @@ function clearDownstream(matches, round, matchInRound, oldWinner) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    BYE,
-    nextBracketSize,
-    shuffleArray,
-    buildFirstRoundSlots,
-    buildMatches,
-    propagateByes,
-    matchIndexString,
-    parseMatchIndex,
-    findMatchIndex,
-    validateScore,
-    advanceWinner,
-    clearDownstream
+    'BYE': BYE,
+    'nextBracketSize': nextBracketSize_,
+    'shuffleArray': shuffleArray_,
+    'buildFirstRoundSlots': buildFirstRoundSlots_,
+    'buildMatches': buildMatches_,
+    'propagateByes': propagateByes_,
+    'matchIndexString': matchIndexString_,
+    'parseMatchIndex': parseMatchIndex_,
+    'findMatchIndex': findMatchIndex_,
+    'validateScore': validateScore_,
+    'advanceWinner': advanceWinner_,
+    'clearDownstream': clearDownstream_
   };
 }

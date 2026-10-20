@@ -2,8 +2,8 @@
  * MATCHES — sheet serialization
  * =======================================================*/
 
-function readMatches(tabName) {
-  const sheet = getTournamentSheet(tabName);
+function readMatches_(tabName) {
+  const sheet = getTournamentSheet_(tabName);
   const values = sheet.getRange(
     LAYOUT.MATCHES_START, 1,
     LAYOUT.MATCHES_MAX, MATCH_HEADERS.length
@@ -13,7 +13,7 @@ function readMatches(tabName) {
   for (let i = 0; i < values.length; i++) {
     const row = values[i];
     if (!row[0]) continue;
-    const parsed = parseMatchIndex(row[0]);
+    const parsed = parseMatchIndex_(row[0]);
     if (!parsed) continue;
     out.push({
       round:        parsed.round,
@@ -23,15 +23,15 @@ function readMatches(tabName) {
       playerB:      row[3] || '',
       playerBScore: row[4] === '' ? '' : Number(row[4]),
       winner:       row[5] || '',
-      updatedAt:    toIsoString(row[6]),
+      updatedAt:    toIsoString_(row[6]),
       updatedBy:    row[7] || ''
     });
   }
   return out;
 }
 
-function writeMatches(tournament, matches) {
-  const sheet = getTournamentSheet(tournament.tabName);
+function writeMatches_(tournament, matches) {
+  const sheet = getTournamentSheet_(tournament.tabName);
 
   const blank = [];
   for (let i = 0; i < LAYOUT.MATCHES_MAX; i++) {
@@ -44,7 +44,7 @@ function writeMatches(tournament, matches) {
 
   if (matches.length) {
     const rows = matches.map(m => [
-      matchIndexString(m.round, m.matchInRound),
+      matchIndexString_(m.round, m.matchInRound),
       m.playerA || '',
       m.playerAScore === '' ? '' : m.playerAScore,
       m.playerB || '',
@@ -59,40 +59,40 @@ function writeMatches(tournament, matches) {
     ).setValues(rows);
   }
 
-  cacheRemoveSnapshot(tournament.id);
+  cacheRemoveSnapshot_(tournament.id);
 }
 
 /* =========================================================
  * Bracket generation
  * =======================================================*/
 
-function generateBracket(tournamentId) {
+function generateBracket_(tournamentId) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    assertOwner(tournamentId);
-    const t = requireTournament(tournamentId);
+    assertOwner_(tournamentId);
+    const t = requireTournament_(tournamentId);
 
     if (t.state !== TOURNAMENT_STATES.REGISTRATION_OPEN) {
       throw new Error('INVALID_STATE');
     }
 
-    const participants = readParticipants(t.tabName);
+    const participants = readParticipants_(t.tabName);
     if (participants.length < MIN_PLAYERS) {
       throw new Error('MIN_PLAYERS_REQUIRED');
     }
 
     const displayNames = participants.map(p => p.displayName);
-    const bracketSize  = nextBracketSize(displayNames.length);
-    const slots        = buildFirstRoundSlots(displayNames, bracketSize);
-    const matches      = buildMatches(slots, bracketSize, nowIso);
+    const bracketSize  = nextBracketSize_(displayNames.length);
+    const slots        = buildFirstRoundSlots_(displayNames, bracketSize);
+    const matches      = buildMatches_(slots, bracketSize, nowIso_);
 
-    writeMatches(t, matches);
+    writeMatches_(t, matches);
 
     t.state     = TOURNAMENT_STATES.BRACKET_GENERATED;
-    t.generated = nowIso();
-    updateMasterRow(tournamentId, { state: t.state, generated: t.generated });
-    writeTournamentMeta(t);
+    t.generated = nowIso_();
+    updateMasterRow_(tournamentId, { state: t.state, generated: t.generated });
+    writeTournamentMeta_(t);
 
     return { size: bracketSize, matchCount: matches.length };
   } finally {
@@ -104,19 +104,19 @@ function generateBracket(tournamentId) {
  * Winner pick (explicit, by dropdown)
  * =======================================================*/
 
-function pickWinner(tournamentId, matchIndex, winnerName) {
+function pickWinner_(tournamentId, matchIndex, winnerName) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const ctx = assertCanWrite(tournamentId);
-    const t = requireTournament(tournamentId);
+    const ctx = assertCanWrite_(tournamentId);
+    const t = requireTournament_(tournamentId);
     if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) throw new Error('INVALID_STATE');
 
-    const parsed = parseMatchIndex(matchIndex);
+    const parsed = parseMatchIndex_(matchIndex);
     if (!parsed) throw new Error('INVALID_MATCH_INDEX');
 
-    const matches = readMatches(t.tabName);
-    const idx = findMatchIndex(matches, parsed.round, parsed.matchInRound);
+    const matches = readMatches_(t.tabName);
+    const idx = findMatchIndex_(matches, parsed.round, parsed.matchInRound);
     if (idx === -1) throw new Error('MATCH_NOT_FOUND');
 
     const match = matches[idx];
@@ -131,16 +131,16 @@ function pickWinner(tournamentId, matchIndex, winnerName) {
     }
 
     if (match.winner && match.winner !== name) {
-      clearDownstream(matches, parsed.round, parsed.matchInRound, match.winner);
+      clearDownstream_(matches, parsed.round, parsed.matchInRound, match.winner);
     }
 
     match.winner    = name;
-    match.updatedAt = nowIso();
+    match.updatedAt = nowIso_();
     match.updatedBy = ctx.email;
 
-    advanceWinner(matches, parsed.round, parsed.matchInRound, name);
+    advanceWinner_(matches, parsed.round, parsed.matchInRound, name);
 
-    writeMatches(t, matches);
+    writeMatches_(t, matches);
     return { ok: true, matches: matches };
   } finally {
     lock.releaseLock();
@@ -151,28 +151,28 @@ function pickWinner(tournamentId, matchIndex, winnerName) {
  * Scores (visual only)
  * =======================================================*/
 
-function setMatchScores(tournamentId, matchIndex, scoreA, scoreB) {
+function setMatchScores_(tournamentId, matchIndex, scoreA, scoreB) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const ctx = assertCanWrite(tournamentId);
-    const t = requireTournament(tournamentId);
+    const ctx = assertCanWrite_(tournamentId);
+    const t = requireTournament_(tournamentId);
     if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) throw new Error('INVALID_STATE');
 
-    const parsed = parseMatchIndex(matchIndex);
+    const parsed = parseMatchIndex_(matchIndex);
     if (!parsed) throw new Error('INVALID_MATCH_INDEX');
 
-    const matches = readMatches(t.tabName);
-    const idx = findMatchIndex(matches, parsed.round, parsed.matchInRound);
+    const matches = readMatches_(t.tabName);
+    const idx = findMatchIndex_(matches, parsed.round, parsed.matchInRound);
     if (idx === -1) throw new Error('MATCH_NOT_FOUND');
 
     const match = matches[idx];
-    match.playerAScore = (scoreA === '' || scoreA == null) ? '' : validateScore(scoreA);
-    match.playerBScore = (scoreB === '' || scoreB == null) ? '' : validateScore(scoreB);
-    match.updatedAt    = nowIso();
+    match.playerAScore = (scoreA === '' || scoreA == null) ? '' : validateScore_(scoreA);
+    match.playerBScore = (scoreB === '' || scoreB == null) ? '' : validateScore_(scoreB);
+    match.updatedAt    = nowIso_();
     match.updatedBy    = ctx.email;
 
-    writeMatches(t, matches);
+    writeMatches_(t, matches);
     return { ok: true };
   } finally {
     lock.releaseLock();
@@ -183,30 +183,30 @@ function setMatchScores(tournamentId, matchIndex, scoreA, scoreB) {
  * Clear winner (undo)
  * =======================================================*/
 
-function clearWinner(tournamentId, matchIndex) {
+function clearWinner_(tournamentId, matchIndex) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const ctx = assertCanWrite(tournamentId);
-    const t = requireTournament(tournamentId);
+    const ctx = assertCanWrite_(tournamentId);
+    const t = requireTournament_(tournamentId);
     if (t.state !== TOURNAMENT_STATES.BRACKET_GENERATED) throw new Error('INVALID_STATE');
 
-    const parsed = parseMatchIndex(matchIndex);
+    const parsed = parseMatchIndex_(matchIndex);
     if (!parsed) throw new Error('INVALID_MATCH_INDEX');
 
-    const matches = readMatches(t.tabName);
-    const idx = findMatchIndex(matches, parsed.round, parsed.matchInRound);
+    const matches = readMatches_(t.tabName);
+    const idx = findMatchIndex_(matches, parsed.round, parsed.matchInRound);
     if (idx === -1) throw new Error('MATCH_NOT_FOUND');
 
     const match = matches[idx];
     if (!match.winner) throw new Error('NO_RESULT_TO_UNDO');
 
-    clearDownstream(matches, parsed.round, parsed.matchInRound, match.winner);
+    clearDownstream_(matches, parsed.round, parsed.matchInRound, match.winner);
     match.winner    = '';
-    match.updatedAt = nowIso();
+    match.updatedAt = nowIso_();
     match.updatedBy = ctx.email;
 
-    writeMatches(t, matches);
+    writeMatches_(t, matches);
     return { ok: true, matches: matches };
   } finally {
     lock.releaseLock();
@@ -217,8 +217,8 @@ function clearWinner(tournamentId, matchIndex) {
  * Read model
  * =======================================================*/
 
-function getMatches(tournamentId) {
-  const t = findTournamentById(tournamentId);
+function getMatches_(tournamentId) {
+  const t = findTournamentById_(tournamentId);
   if (!t) return [];
-  return readMatches(t.tabName);
+  return readMatches_(t.tabName);
 }

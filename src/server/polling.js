@@ -7,9 +7,9 @@
  * @param {object} t - master row
  * @returns {object}
  */
-function buildRawSnapshot(t) {
-  const participants = readParticipants(t.tabName);
-  const matches      = readMatches(t.tabName);
+function buildRawSnapshot_(t) {
+  const participants = readParticipants_(t.tabName);
+  const matches      = readMatches_(t.tabName);
 
   let latestMatchUpdate = '';
   for (let i = 0; i < matches.length; i++) {
@@ -31,7 +31,7 @@ function buildRawSnapshot(t) {
     participants: participants,
     matches:      matches,
     version:      t.state + '|' + latestMatchUpdate,
-    serverTime:   nowIso()
+    serverTime:   nowIso_()
   };
 }
 
@@ -43,7 +43,7 @@ function buildRawSnapshot(t) {
  * Produce a role-safe view of the snapshot.
  * Emails are only included for owner and manager.
  */
-function sanitizeSnapshot(raw, role) {
+function sanitizeSnapshot_(raw, role) {
   const exposeEmails = (role === ROLES.OWNER || role === ROLES.MANAGER);
 
   const participants = raw.participants.map(function (p) {
@@ -75,23 +75,23 @@ function sanitizeSnapshot(raw, role) {
  * @param {string} tournamentId
  * @returns {object|null}
  */
-function getTournamentSnapshot(tournamentId) {
-  const t = findTournamentById(tournamentId);
+function getTournamentSnapshot_(tournamentId) {
+  const t = findTournamentById_(tournamentId);
   if (!t) return null;
 
-  const ctx  = getCurrentUserContext(tournamentId);
+  const ctx  = getCurrentUserContext_(tournamentId);
   const role = ctx.role;
 
   const key = CACHE_KEYS.SNAPSHOT(tournamentId);
-  let raw = cacheGet(key);
+  let raw = cacheGet_(key);
 
   if (!raw) {
-    raw = buildRawSnapshot(t);
-    cachePut(key, raw, CACHE_TTL_SECONDS);
+    raw = buildRawSnapshot_(t);
+    cachePut_(key, raw, CACHE_TTL_SECONDS);
   }
 
   // Always add role + inviteToken for owner/manager (never cached)
-  const view = sanitizeSnapshot(raw, role);
+  const view = sanitizeSnapshot_(raw, role);
   view.role = role;
 
   if (role === ROLES.OWNER) {

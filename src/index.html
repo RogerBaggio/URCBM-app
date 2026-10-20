@@ -4,7 +4,7 @@
   <base href="<?!= appUrl ?>" target="_top">
   <meta charset="utf-8">
   <title>URCBM</title>
-  <?!= include('styles') ?>
+  <?!= include_('styles') ?>
 </head>
 <body>
   <header id="app-header">
@@ -25,12 +25,13 @@
 
   <script>window.BOOTSTRAP = <?!= bootstrap ?>;</script>
 
-  <?!= include('helpers') ?>
-  <?!= include('client-api') ?>
-  <?!= include('pages-hub') ?>
-  <?!= include('pages-invite') ?>
-  <?!= include('pages-tournament') ?>
-  <?!= include('pages-error') ?>
-  <?!= include('app') ?>
+  <?!= include_('helpers') ?>
+  <?!= include_('client-api') ?>
+  <?!= include_('pages-hub') ?>
+  <?!= include_('pages-invite') ?>
+  <?!= include_('pages-tournament') ?>
+  <?!= include_('pages-error') ?>
+  <?!= include_('pages-auth') ?>
+  <?!= include_('app') ?>
 </body>
 </html>

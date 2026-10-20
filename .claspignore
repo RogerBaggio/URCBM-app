@@ -3,6 +3,7 @@
 .gitignore
 node_modules/**
 test/**
+test/testSnipets.js
 package.json
 package-lock.json
 README.md
